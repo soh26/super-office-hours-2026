@@ -1,0 +1,221 @@
+---
+---
+
+<div class="modal-overlay" id="ticket-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">Buy tickets</h2>
+      <button type="button" class="modal-close" id="modal-close" aria-label="Close">×</button>
+    </div>
+
+    <!-- Step 1: Select tickets -->
+    <div id="step-1">
+      <div class="ticket-row" data-ticket="startup">
+        <div class="ticket-info">
+          <div class="name">Startup ticket</div>
+          <div class="price">¥2,500</div>
+        </div>
+        <div class="qty-controls">
+          <button type="button" class="qty-btn" data-action="-" data-ticket="startup">−</button>
+          <span class="qty-value" id="qty-startup">0</span>
+          <button type="button" class="qty-btn" data-action="+" data-ticket="startup">+</button>
+        </div>
+      </div>
+
+      <div class="ticket-row" data-ticket="investor">
+        <div class="ticket-info">
+          <div class="name">Investor ticket</div>
+          <div class="price">¥5,000</div>
+        </div>
+        <div class="qty-controls">
+          <button type="button" class="qty-btn" data-action="-" data-ticket="investor">−</button>
+          <span class="qty-value" id="qty-investor">0</span>
+          <button type="button" class="qty-btn" data-action="+" data-ticket="investor">+</button>
+        </div>
+      </div>
+
+      <!-- LP Dinner (only for investors) -->
+      <div class="ticket-row hidden" id="lp-dinner-row">
+        <div class="ticket-info">
+          <div class="name">LP Dinner (Sep 24)</div>
+          <div class="price">¥25,000</div>
+        </div>
+        <div class="qty-controls">
+          <button type="button" class="qty-btn" id="lp-dinner-toggle">Add</button>
+        </div>
+      </div>
+
+      <div class="modal-total">
+        <span>Total</span>
+        <span id="modal-total-value">¥0</span>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="modal-close-2">Cancel</button>
+        <button type="button" class="btn btn-primary" id="modal-continue" disabled>
+          Continue
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 2: Contact / questions (placeholder) -->
+    <div id="step-2" class="hidden">
+      <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.95rem;">
+        We'll collect a few details and send you a confirmation email with your QR code.
+      </p>
+
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem;">
+        <input
+          type="email"
+          placeholder="Email address"
+          id="email-input"
+          style="padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: white; font-size: 0.95rem;"
+        />
+        <input
+          type="text"
+          placeholder="Full name"
+          id="name-input"
+          style="padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: white; font-size: 0.95rem;"
+        />
+        <input
+          type="text"
+          placeholder="Company / Fund"
+          id="company-input"
+          style="padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: white; font-size: 0.95rem;"
+        />
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="modal-back">Back</button>
+        <button type="button" class="btn btn-primary" id="modal-pay">
+          Proceed to payment
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 3: Confirmation placeholder -->
+    <div id="step-3" class="hidden" style="text-align: center; padding: 1.5rem 0;">
+      <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">✓</div>
+      <h3 style="margin-bottom: 0.5rem;">You're in!</h3>
+      <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">
+        Check your email for the confirmation and QR code.
+      </p>
+      <button type="button" class="btn btn-primary" id="modal-done">Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // @ts-nocheck
+  const PRICES = {
+    startup: 2500,
+    investor: 5000,
+    lpDinner: 25000,
+  };
+
+  let qty = { startup: 0, investor: 0 };
+  let lpDinner = false;
+
+  const modal = document.getElementById("ticket-modal");
+  const totalEl = document.getElementById("modal-total-value");
+  const continueBtn = document.getElementById("modal-continue");
+  const lpRow = document.getElementById("lp-dinner-row");
+  const lpToggle = document.getElementById("lp-dinner-toggle");
+
+  function formatYen(n) {
+    return "¥" + n.toLocaleString();
+  }
+
+  function updateUI() {
+    const qtyStartup = document.getElementById("qty-startup");
+    const qtyInvestor = document.getElementById("qty-investor");
+    if (qtyStartup) qtyStartup.textContent = String(qty.startup);
+    if (qtyInvestor) qtyInvestor.textContent = String(qty.investor);
+
+    document.querySelectorAll(".ticket-row[data-ticket]").forEach((row) => {
+      const key = row.dataset.ticket;
+      row.classList.toggle("picked", !!key && qty[key] > 0);
+    });
+
+    if (lpRow) {
+      lpRow.classList.toggle("hidden", qty.investor === 0);
+      if (qty.investor === 0) lpDinner = false;
+    }
+    if (lpToggle) {
+      lpToggle.textContent = lpDinner ? "Remove" : "Add";
+      if (lpRow) lpRow.classList.toggle("picked", lpDinner);
+    }
+
+    const total =
+      qty.startup * PRICES.startup +
+      qty.investor * PRICES.investor +
+      (lpDinner ? PRICES.lpDinner : 0);
+
+    if (totalEl) totalEl.textContent = formatYen(total);
+    if (continueBtn) continueBtn.disabled = total <= 0;
+  }
+
+  function openModal() {
+    if (modal) modal.classList.add("open");
+    document.body.style.overflow = "hidden";
+    showStep(1);
+  }
+
+  function closeModal() {
+    if (modal) modal.classList.remove("open");
+    document.body.style.overflow = "";
+  }
+
+  function showStep(step) {
+    document.getElementById("step-1").classList.toggle("hidden", step !== 1);
+    document.getElementById("step-2").classList.toggle("hidden", step !== 2);
+    document.getElementById("step-3").classList.toggle("hidden", step !== 3);
+  }
+
+  window.addEventListener("open-ticket-modal", openModal);
+
+  document.getElementById("modal-close")?.addEventListener("click", closeModal);
+  document.getElementById("modal-close-2")?.addEventListener("click", closeModal);
+  document.getElementById("modal-done")?.addEventListener("click", closeModal);
+
+  modal?.addEventListener("click", (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  document.querySelectorAll(".qty-btn[data-action]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const action = btn.dataset.action;
+      const ticket = btn.dataset.ticket;
+      if (!ticket) return;
+
+      if (action === "+") qty[ticket]++;
+      if (action === "-" && qty[ticket] > 0) qty[ticket]--;
+      updateUI();
+    });
+  });
+
+  lpToggle?.addEventListener("click", () => {
+    lpDinner = !lpDinner;
+    updateUI();
+  });
+
+  document.getElementById("modal-continue")?.addEventListener("click", () => {
+    showStep(2);
+  });
+
+  document.getElementById("modal-back")?.addEventListener("click", () => {
+    showStep(1);
+  });
+
+  document.getElementById("modal-pay")?.addEventListener("click", () => {
+    const email = document.getElementById("email-input")?.value;
+    if (!email) {
+      alert("Please enter your email");
+      return;
+    }
+    // TODO: Call Stripe Checkout or Supabase Edge Function here
+    showStep(3);
+  });
+
+  updateUI();
+</script>

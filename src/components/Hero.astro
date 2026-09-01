@@ -1,0 +1,48 @@
+---
+---
+
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge">
+      By TAKEOFF tokyo · Asia's flagship startup conference, since 2023
+    </div>
+
+    <h1 class="hero-title">SUPER OFFICE<br />HOURS</h1>
+
+    <p class="hero-meta">
+      September 25, 2026 · Dragon Gate, Shibuya, Tokyo
+    </p>
+
+    <div class="hero-actions">
+      <button type="button" class="btn btn-primary" id="hero-buy-btn">
+        Buy tickets
+      </button>
+      <a href="#format" class="btn btn-secondary">See the format</a>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value">100</div>
+        <div class="stat-label">investors</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">300</div>
+        <div class="stat-label">startups</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">480</div>
+        <div class="stat-label">meetings</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">3 yrs</div>
+        <div class="stat-label">Takeoff Tokyo</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  document.getElementById("hero-buy-btn")?.addEventListener("click", () => {
+    window.dispatchEvent(new CustomEvent("open-ticket-modal"));
+  });
+</script>
