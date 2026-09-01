@@ -58,31 +58,97 @@
       </div>
     </div>
 
-    <!-- Step 2: Contact / questions (placeholder) -->
+    <!-- Step 2: Contact + live SOH questionnaire -->
     <div id="step-2" class="hidden">
-      <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.95rem;">
-        We'll collect a few details and send you a confirmation email with your QR code.
-      </p>
+      <div class="field">
+        <label>Email *</label>
+        <input type="email" id="f-email" autocomplete="email" />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>First name *</label>
+          <input type="text" id="f-first" autocomplete="given-name" />
+        </div>
+        <div class="field">
+          <label>Last name *</label>
+          <input type="text" id="f-last" autocomplete="family-name" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Company *</label>
+        <input type="text" id="f-company" autocomplete="organization" />
+      </div>
+      <div class="field">
+        <label>Title / role</label>
+        <input type="text" id="f-title" />
+      </div>
 
-      <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem;">
-        <input
-          type="email"
-          placeholder="Email address"
-          id="email-input"
-          style="padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: white; font-size: 0.95rem;"
-        />
-        <input
-          type="text"
-          placeholder="Full name"
-          id="name-input"
-          style="padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: white; font-size: 0.95rem;"
-        />
-        <input
-          type="text"
-          placeholder="Company / Fund"
-          id="company-input"
-          style="padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: white; font-size: 0.95rem;"
-        />
+      <div id="ttm-startup-extra" class="hidden">
+        <div class="cond-title">For Startups</div>
+        <div class="field">
+          <label>What does your business do?</label>
+          <input id="f-business-description" />
+        </div>
+        <div class="field">
+          <label>How much funding are you looking to raise?</label>
+          <input id="f-funding-amount" />
+        </div>
+        <div class="field">
+          <label>Funding stage / Series</label>
+          <select id="f-funding-stage">
+            <option value="">Select...</option>
+            <option>Pre-seed</option>
+            <option>Seed</option>
+            <option>Series A</option>
+            <option>Series B</option>
+            <option>Series C+</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>What kind of VCs do you want to meet?</label>
+          <input id="f-target-vc" />
+        </div>
+      </div>
+
+      <div id="ttm-investor-extra" class="hidden">
+        <div class="cond-title">For Investors</div>
+        <div class="field">
+          <label>Typical ticket size</label>
+          <select id="f-investor-ticket-size">
+            <option value="">Select...</option>
+            <option>&lt; ¥5M</option>
+            <option>¥5M – ¥20M</option>
+            <option>¥20M – ¥50M</option>
+            <option>¥50M+</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Which industries/sectors do you prioritize?</label>
+          <div class="chips" id="chips-investor-sectors">
+            <button type="button" class="chip" data-val="All sectors">All sectors</button>
+            <button type="button" class="chip" data-val="Deep Tech / AI">Deep Tech / AI</button>
+            <button type="button" class="chip" data-val="Fintech">Fintech</button>
+            <button type="button" class="chip" data-val="SaaS / B2B Software">SaaS / B2B Software</button>
+            <button type="button" class="chip" data-val="Consumer / E-commerce">Consumer / E-commerce</button>
+            <button type="button" class="chip" data-val="Biotech / Healthtech">Biotech / Healthtech</button>
+            <button type="button" class="chip" data-val="Climate / Sustainability">Climate / Sustainability</button>
+            <button type="button" class="chip" data-val="Gaming / Entertainment">Gaming / Entertainment</button>
+            <button type="button" class="chip other-chip" data-val="Other">Other</button>
+          </div>
+          <input id="chips-investor-sectors-other" class="hidden" placeholder="Type your sector..." style="margin-top:0.5rem" />
+        </div>
+        <div class="field">
+          <label>Are you open to being lead investor on a deal?</label>
+          <div class="radio-row" data-name="invlead"><span>Yes</span><span>No</span></div>
+        </div>
+        <div class="field">
+          <label>Do you invest in foreign (non-Japan) startups?</label>
+          <div class="radio-row" data-name="invglobal"><span>Yes</span><span>No</span></div>
+        </div>
+        <div class="field">
+          <label>Are you looking for LPs?</label>
+          <div class="radio-row" data-name="invlookinglp"><span>Yes</span><span>No</span></div>
+        </div>
       </div>
 
       <div class="modal-actions">
@@ -170,6 +236,47 @@
     document.getElementById("step-1").classList.toggle("hidden", step !== 1);
     document.getElementById("step-2").classList.toggle("hidden", step !== 2);
     document.getElementById("step-3").classList.toggle("hidden", step !== 3);
+    document.getElementById("ttm-startup-extra")?.classList.toggle("hidden", qty.startup <= 0);
+    document.getElementById("ttm-investor-extra")?.classList.toggle("hidden", qty.investor <= 0);
+  }
+
+  function val(id) {
+    return (document.getElementById(id)?.value || "").trim();
+  }
+
+  function radioVal(name) {
+    const sel = document.querySelector(`.radio-row[data-name="${name}"] span.sel`);
+    return sel ? sel.textContent.trim() : "";
+  }
+
+  function chipVals(id) {
+    const root = document.getElementById(id);
+    if (!root) return [];
+    return [...root.querySelectorAll(".chip.sel")].map((el) => {
+      if (el.classList.contains("other-chip")) {
+        return val(id + "-other") || "Other";
+      }
+      return el.getAttribute("data-val");
+    });
+  }
+
+  function collectQuestionnaire() {
+    const q = {};
+    if (qty.startup > 0) {
+      q.business_description = val("f-business-description");
+      q.funding_amount_needed = val("f-funding-amount");
+      q.funding_stage = val("f-funding-stage");
+      q.target_vc_types = val("f-target-vc");
+    }
+    if (qty.investor > 0) {
+      q.investor_ticket_size = val("f-investor-ticket-size");
+      q.investor_focus_industries = chipVals("chips-investor-sectors").join(", ");
+      q.investor_lead_ok = radioVal("invlead");
+      q.investor_global_ok = radioVal("invglobal");
+      q.investor_looking_for_lp = radioVal("invlookinglp");
+      q.lp_dinner_addon = lpDinner;
+    }
+    return q;
   }
 
   window.addEventListener("open-ticket-modal", openModal);
@@ -207,14 +314,95 @@
     showStep(1);
   });
 
-  document.getElementById("modal-pay")?.addEventListener("click", () => {
-    const email = document.getElementById("email-input")?.value;
-    if (!email) {
-      alert("Please enter your email");
+  document.querySelectorAll(".chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      chip.classList.toggle("sel");
+      if (chip.classList.contains("other-chip")) {
+        document.getElementById("chips-investor-sectors-other")?.classList.toggle("hidden", !chip.classList.contains("sel"));
+      }
+    });
+  });
+
+  document.querySelectorAll(".radio-row span").forEach((span) => {
+    span.addEventListener("click", () => {
+      span.parentElement.querySelectorAll("span").forEach((s) => s.classList.remove("sel"));
+      span.classList.add("sel");
+    });
+  });
+
+  document.getElementById("modal-pay")?.addEventListener("click", async () => {
+    const email = val("f-email");
+    const name = (val("f-first") + " " + val("f-last")).trim();
+    const company = val("f-company");
+    const role = val("f-title");
+    const payBtn = document.getElementById("modal-pay");
+    if (!email || !val("f-first") || !val("f-last") || !company) {
+      alert("Please fill email, name and company");
       return;
     }
-    // TODO: Call Stripe Checkout or Supabase Edge Function here
-    showStep(3);
+    payBtn.disabled = true;
+    payBtn.textContent = "Redirecting to Stripe…";
+    try {
+      const supabaseUrl = window.SUPABASE_URL || "";
+      const supabaseKey = window.SUPABASE_ANON_KEY || "";
+      const checkoutApi =
+        window.STRIPE_API_URL ||
+        (location.hostname === "localhost"
+          ? "http://localhost:8787/api/create-checkout"
+          : "/api/create-checkout");
+
+      const registrationId = crypto.randomUUID();
+      const tickets = { startup: qty.startup, investor: qty.investor };
+      const total =
+        qty.startup * 2500 +
+        qty.investor * 5000 +
+        (lpDinner && qty.investor > 0 ? 25000 : 0);
+
+      if (supabaseUrl && supabaseKey) {
+        const regRes = await fetch(supabaseUrl + "/rest/v1/registrations", {
+          method: "POST",
+          headers: {
+            apikey: supabaseKey,
+            Authorization: "Bearer " + supabaseKey,
+            "Content-Type": "application/json",
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify({
+            id: registrationId,
+            full_name: name,
+            email,
+            company,
+            role,
+            tickets,
+            total_amount: total,
+            currency: "jpy",
+            event_slug: "super-office-hours",
+            questionnaire: collectQuestionnaire(),
+            user_agent: navigator.userAgent,
+            referrer: document.referrer || null,
+          }),
+        });
+        if (!regRes.ok) throw new Error("Registration failed: " + (await regRes.text()));
+      }
+
+      const res = await fetch(checkoutApi, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          registration_id: registrationId,
+          tickets,
+          event_slug: "super-office-hours",
+          lp_dinner: lpDinner,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) throw new Error(data.error || "Checkout failed");
+      window.location.href = data.url;
+    } catch (err) {
+      alert(err.message || "Could not start Stripe Checkout");
+      payBtn.disabled = false;
+      payBtn.textContent = "Proceed to payment";
+    }
   });
 
   updateUI();
