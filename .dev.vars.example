@@ -1,0 +1,7 @@
+# Copy to .dev.vars for local `wrangler pages dev` (functions/api/*.js read this via context.env)
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+
+# Google Workspace SMTP (tickets@takeoff-tokyo.com) — use an App Password, not the account login password
+GMAIL_ADDRESS=
+GMAIL_APP_PASSWORD=

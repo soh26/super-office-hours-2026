@@ -1,4 +1,5 @@
 const PRICES = {
+  test_taro: { amount: 50, name: "Taro ticket" },
   startup: { amount: 2500, name: "Startup ticket" },
   investor: { amount: 5000, name: "Investor ticket" },
   lpDinner: { amount: 25000, name: "LP Dinner (Sep 24)" },
@@ -32,8 +33,19 @@ export async function onRequestPost(context) {
 
   if (!email) return json({ error: "Email required" }, 400);
 
+  const isDebug =
+    context.env.DEBUG === "true" ||
+    context.env.ENABLE_TEST_TICKETS === "true" ||
+    secret.startsWith("sk_test_");
+
+  if (!isDebug && Number(qty.test_taro || 0) > 0) {
+    return json({ error: "Test tickets are disabled in production" }, 400);
+  }
+
+  const allowedKeys = isDebug ? ["test_taro", "startup", "investor"] : ["startup", "investor"];
+
   const line_items = [];
-  for (const key of ["startup", "investor"]) {
+  for (const key of allowedKeys) {
     const count = Number(qty[key] || 0);
     if (count > 0) {
       line_items.push({

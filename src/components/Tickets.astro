@@ -1,4 +1,5 @@
 ---
+const isDev = import.meta.env.DEV;
 ---
 
 <section class="section" id="tickets">
@@ -6,6 +7,19 @@
     <h2 class="section-title">Tickets</h2>
 
     <div class="ticket-cards">
+      {isDev && (
+        <div class="ticket-card" style="border-style: dashed; border-color: rgba(255, 255, 255, 0.2);">
+          <div style="font-size: 0.85rem; color: var(--text-muted);">Test Taro (Debug)</div>
+          <div class="price">¥50</div>
+          <ul>
+            <li>Debug testing ticket</li>
+          </ul>
+          <button type="button" class="btn btn-secondary open-modal-btn" style="width: 100%;">
+            Get taro ticket
+          </button>
+        </div>
+      )}
+
       <div class="ticket-card">
         <div style="font-size: 0.85rem; color: var(--text-muted);">Startup</div>
         <div class="price">¥2,500</div>

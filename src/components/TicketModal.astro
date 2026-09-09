@@ -1,4 +1,5 @@
 ---
+const isDev = import.meta.env.DEV;
 ---
 
 <div class="modal-overlay" id="ticket-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
@@ -10,6 +11,20 @@
 
     <!-- Step 1: Select tickets -->
     <div id="step-1">
+      {isDev && (
+        <div class="ticket-row" data-ticket="test_taro">
+          <div class="ticket-info">
+            <div class="name">Taro ticket <span style="font-size: 0.75rem; color: var(--accent);">(Debug)</span></div>
+            <div class="price">¥50</div>
+          </div>
+          <div class="qty-controls">
+            <button type="button" class="qty-btn" data-action="-" data-ticket="test_taro">−</button>
+            <span class="qty-value" id="qty-test_taro">0</span>
+            <button type="button" class="qty-btn" data-action="+" data-ticket="test_taro">+</button>
+          </div>
+        </div>
+      )}
+
       <div class="ticket-row" data-ticket="startup">
         <div class="ticket-info">
           <div class="name">Startup ticket</div>
@@ -173,13 +188,16 @@
 
 <script>
   // @ts-nocheck
+  const isDev = import.meta.env.DEV;
   const PRICES = {
+    ...(isDev ? { test_taro: 50 } : {}),
     startup: 2500,
     investor: 5000,
     lpDinner: 25000,
   };
+  const TICKET_KEYS = Object.keys(PRICES).filter((k) => k !== "lpDinner");
 
-  let qty = { startup: 0, investor: 0 };
+  let qty = Object.fromEntries(TICKET_KEYS.map((k) => [k, 0]));
   let lpDinner = false;
 
   const modal = document.getElementById("ticket-modal");
@@ -193,13 +211,10 @@
   }
 
   function updateUI() {
-    const qtyStartup = document.getElementById("qty-startup");
-    const qtyInvestor = document.getElementById("qty-investor");
-    if (qtyStartup) qtyStartup.textContent = String(qty.startup);
-    if (qtyInvestor) qtyInvestor.textContent = String(qty.investor);
-
     document.querySelectorAll(".ticket-row[data-ticket]").forEach((row) => {
       const key = row.dataset.ticket;
+      const qtyEl = document.getElementById("qty-" + key);
+      if (qtyEl) qtyEl.textContent = String(qty[key] ?? 0);
       row.classList.toggle("picked", !!key && qty[key] > 0);
     });
 
@@ -213,8 +228,7 @@
     }
 
     const total =
-      qty.startup * PRICES.startup +
-      qty.investor * PRICES.investor +
+      TICKET_KEYS.reduce((sum, key) => sum + qty[key] * PRICES[key], 0) +
       (lpDinner ? PRICES.lpDinner : 0);
 
     if (totalEl) totalEl.textContent = formatYen(total);
@@ -352,11 +366,10 @@
           : "/api/create-checkout");
 
       const registrationId = crypto.randomUUID();
-      const tickets = { startup: qty.startup, investor: qty.investor };
+      const tickets = { ...qty };
       const total =
-        qty.startup * 2500 +
-        qty.investor * 5000 +
-        (lpDinner && qty.investor > 0 ? 25000 : 0);
+        TICKET_KEYS.reduce((sum, key) => sum + qty[key] * PRICES[key], 0) +
+        (lpDinner && qty.investor > 0 ? PRICES.lpDinner : 0);
 
       if (supabaseUrl && supabaseKey) {
         const regRes = await fetch(supabaseUrl + "/rest/v1/registrations", {
@@ -389,10 +402,11 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          registration_id: registrationId,
-          tickets,
-          event_slug: "super-office-hours",
-          lp_dinner: lpDinner,
+          qty: tickets,
+          email,
+          name,
+          company,
+          lpDinner,
         }),
       });
       const data = await res.json();
@@ -406,4 +420,10 @@
   });
 
   updateUI();
+
+  if (new URLSearchParams(location.search).get("paid") === "1") {
+    openModal();
+    showStep(3);
+    history.replaceState({}, "", location.pathname);
+  }
 </script>
