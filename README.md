@@ -53,6 +53,23 @@ stripe listen --forward-to localhost:8787/api/stripe-webhook
 
 `stripe listen` prints a webhook signing secret starting with `whsec_...` — use that as `STRIPE_WEBHOOK_SECRET` in `.dev.vars` while testing locally (it's different from the production endpoint's signing secret).
 
+### Automated and Manual Email Tests
+
+1. **Run automated unit tests:**
+   ```bash
+   npm test
+   ```
+   Runs unit tests verifying HTML/text email rendering, XSS escaping, currency formatting, and Stripe webhook email triggering.
+
+2. **Send a live test email via SMTP:**
+   ```bash
+   # Dry-run preview in terminal:
+   npm run test:email -- --dry-run
+
+   # Send a real test email using .dev.vars credentials:
+   npm run test:email -- your-email@example.com
+   ```
+
 ## Project structure
 
 ```

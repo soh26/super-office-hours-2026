@@ -45,9 +45,9 @@ export async function onRequestPost(context) {
   });
 }
 
-async function sendTicketConfirmation(stripe, env, session) {
+export async function sendTicketConfirmation(stripe, env, session, MailerClass = WorkerMailer) {
   const email = session.customer_details?.email || session.customer_email;
-  if (!email) return;
+  if (!email) return null;
 
   const name = session.metadata?.name || "";
   const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 20 });
@@ -58,7 +58,7 @@ async function sendTicketConfirmation(stripe, env, session) {
     totalAmount: session.amount_total,
   });
 
-  const mailer = await WorkerMailer.connect({
+  const mailer = await MailerClass.connect({
     credentials: {
       username: env.GMAIL_ADDRESS,
       password: env.GMAIL_APP_PASSWORD,
@@ -69,7 +69,7 @@ async function sendTicketConfirmation(stripe, env, session) {
     secure: true,
   });
 
-  await mailer.send({
+  return await mailer.send({
     from: { name: "Super Office Hours", email: env.GMAIL_ADDRESS },
     to: { name, email },
     subject: "Your Super Office Hours ticket",
