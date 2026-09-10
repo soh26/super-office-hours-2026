@@ -1,6 +1,6 @@
 import Stripe from "stripe";
-import { WorkerMailer } from "worker-mailer";
-import { buildConfirmationEmail } from "../lib/email.js";
+import { sendConfirmationEmailWithBrevo } from "../lib/email.js";
+import { recordPaidRegistration } from "../lib/supabase.js";
 
 export async function onRequestPost(context) {
   const { env, request } = context;
@@ -30,8 +30,25 @@ export async function onRequestPost(context) {
   }
 
   if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+    let lineItems = [];
     try {
-      await sendTicketConfirmation(stripe, env, event.data.object);
+      const itemsRes = await stripe.checkout.sessions.listLineItems(session.id, { limit: 20 });
+      lineItems = itemsRes.data || [];
+    } catch (err) {
+      console.error("Failed to fetch session line items from Stripe:", err);
+    }
+
+    // 1. Record / update paid registration status in Supabase
+    try {
+      await recordPaidRegistration(env, session, lineItems);
+    } catch (err) {
+      console.error("Failed to record paid registration in Supabase:", err);
+    }
+
+    // 2. Send HTML confirmation email via Brevo
+    try {
+      await sendTicketConfirmation(stripe, env, session, { lineItems });
     } catch (err) {
       // Don't fail the webhook over an email issue — Stripe already has the payment recorded,
       // and a non-2xx response here would make Stripe retry the whole event indefinitely.
@@ -45,35 +62,28 @@ export async function onRequestPost(context) {
   });
 }
 
-async function sendTicketConfirmation(stripe, env, session) {
-  const email = session.customer_details?.email || session.customer_email;
-  if (!email) return;
+export async function sendTicketConfirmation(stripe, env, session, options = {}) {
+  const preloadedLineItems = options && typeof options === "object" ? options.lineItems : null;
+  const email = session.customer_details?.email || session.customer_email || session.metadata?.email;
+  if (!email) return null;
 
-  const name = session.metadata?.name || "";
-  const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 20 });
+  const name = session.metadata?.name || session.customer_details?.name || "";
+  let lineItemsData = preloadedLineItems;
+  if (!lineItemsData && stripe?.checkout?.sessions?.listLineItems) {
+    const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 20 });
+    lineItemsData = lineItems.data;
+  }
 
-  const { html, text } = buildConfirmationEmail({
-    name,
-    lineItems: lineItems.data,
-    totalAmount: session.amount_total,
-  });
+  const fetchFn = typeof options === "object" && options.fetchFn ? options.fetchFn : fetch;
 
-  const mailer = await WorkerMailer.connect({
-    credentials: {
-      username: env.GMAIL_ADDRESS,
-      password: env.GMAIL_APP_PASSWORD,
+  return await sendConfirmationEmailWithBrevo(
+    env,
+    {
+      to: email,
+      name,
+      lineItems: lineItemsData || [],
+      totalAmount: session.amount_total,
     },
-    authType: "login",
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-  });
-
-  await mailer.send({
-    from: { name: "Super Office Hours", email: env.GMAIL_ADDRESS },
-    to: { name, email },
-    subject: "Your Super Office Hours ticket",
-    html,
-    text,
-  });
+    fetchFn
+  );
 }

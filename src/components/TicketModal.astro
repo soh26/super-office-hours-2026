@@ -75,27 +75,37 @@ const isDev = import.meta.env.DEV;
 
     <!-- Step 2: Contact + live SOH questionnaire -->
     <div id="step-2" class="hidden">
+      <div id="modal-alert" class="modal-alert modal-alert-error hidden" role="alert">
+        <span class="modal-alert-icon" id="modal-alert-icon">⚠️</span>
+        <div class="modal-alert-body" id="modal-alert-text"></div>
+        <button type="button" class="modal-alert-close" id="modal-alert-close" aria-label="Dismiss notification">&times;</button>
+      </div>
+
       <div class="field">
-        <label>Email *</label>
-        <input type="email" id="f-email" autocomplete="email" />
+        <label for="f-email">Email *</label>
+        <input type="email" id="f-email" autocomplete="email" placeholder="name@company.com" />
+        <span class="field-error-msg" id="f-email-error">Please enter a valid email address</span>
       </div>
       <div class="field-row">
         <div class="field">
-          <label>First name *</label>
-          <input type="text" id="f-first" autocomplete="given-name" />
+          <label for="f-first">First name *</label>
+          <input type="text" id="f-first" autocomplete="given-name" placeholder="First name" />
+          <span class="field-error-msg" id="f-first-error">First name is required</span>
         </div>
         <div class="field">
-          <label>Last name *</label>
-          <input type="text" id="f-last" autocomplete="family-name" />
+          <label for="f-last">Last name *</label>
+          <input type="text" id="f-last" autocomplete="family-name" placeholder="Last name" />
+          <span class="field-error-msg" id="f-last-error">Last name is required</span>
         </div>
       </div>
       <div class="field">
-        <label>Company *</label>
-        <input type="text" id="f-company" autocomplete="organization" />
+        <label for="f-company">Company *</label>
+        <input type="text" id="f-company" autocomplete="organization" placeholder="Company or Fund name" />
+        <span class="field-error-msg" id="f-company-error">Company name is required</span>
       </div>
       <div class="field">
-        <label>Title / role</label>
-        <input type="text" id="f-title" />
+        <label for="f-title">Title / role</label>
+        <input type="text" id="f-title" placeholder="Founder, Partner, etc." />
       </div>
 
       <div id="ttm-startup-extra" class="hidden">
@@ -205,9 +215,116 @@ const isDev = import.meta.env.DEV;
   const continueBtn = document.getElementById("modal-continue");
   const lpRow = document.getElementById("lp-dinner-row");
   const lpToggle = document.getElementById("lp-dinner-toggle");
+  const modalAlert = document.getElementById("modal-alert");
+  const modalAlertText = document.getElementById("modal-alert-text");
+  const modalAlertIcon = document.getElementById("modal-alert-icon");
+  const modalAlertClose = document.getElementById("modal-alert-close");
 
   function formatYen(n) {
-    return "¥" + n.toLocaleString();
+    return "¥" + Number(n).toLocaleString();
+  }
+
+  function showModalAlert(message, type = "error") {
+    if (!modalAlert || !modalAlertText) return;
+    modalAlert.className = `modal-alert modal-alert-${type}`;
+    if (modalAlertIcon) {
+      modalAlertIcon.textContent = type === "error" ? "⚠️" : type === "warning" ? "ℹ️" : "✓";
+    }
+    modalAlertText.textContent = message;
+    modalAlert.classList.remove("hidden");
+  }
+
+  function hideModalAlert() {
+    if (modalAlert) modalAlert.classList.add("hidden");
+  }
+
+  modalAlertClose?.addEventListener("click", hideModalAlert);
+
+  function setFieldError(id, msg) {
+    const el = document.getElementById(id);
+    const errEl = document.getElementById(id + "-error");
+    if (el) el.classList.add("field-invalid");
+    if (errEl) {
+      if (msg) errEl.textContent = msg;
+      errEl.classList.add("visible");
+    }
+  }
+
+  function clearFieldError(id) {
+    const el = document.getElementById(id);
+    const errEl = document.getElementById(id + "-error");
+    if (el) el.classList.remove("field-invalid");
+    if (errEl) errEl.classList.remove("visible");
+  }
+
+  function clearAllFieldErrors() {
+    ["f-email", "f-first", "f-last", "f-company"].forEach(clearFieldError);
+    hideModalAlert();
+  }
+
+  // Live validation listeners to clear errors on user input
+  ["f-email", "f-first", "f-last", "f-company"].forEach((id) => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.addEventListener("input", () => {
+        clearFieldError(id);
+        if (modalAlert && !modalAlert.classList.contains("hidden")) {
+          const email = val("f-email");
+          const first = val("f-first");
+          const last = val("f-last");
+          const company = val("f-company");
+          if (email && first && last && company) hideModalAlert();
+        }
+      });
+    }
+  });
+
+  function validateStep2() {
+    clearAllFieldErrors();
+    let isValid = true;
+    let firstInvalidEl = null;
+
+    const email = val("f-email");
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email) {
+      setFieldError("f-email", "Email is required");
+      isValid = false;
+      firstInvalidEl = firstInvalidEl || document.getElementById("f-email");
+    } else if (!emailRegex.test(email)) {
+      setFieldError("f-email", "Please enter a valid email address (e.g. you@company.com)");
+      isValid = false;
+      firstInvalidEl = firstInvalidEl || document.getElementById("f-email");
+    }
+
+    if (!val("f-first")) {
+      setFieldError("f-first", "First name is required");
+      isValid = false;
+      firstInvalidEl = firstInvalidEl || document.getElementById("f-first");
+    }
+
+    if (!val("f-last")) {
+      setFieldError("f-last", "Last name is required");
+      isValid = false;
+      firstInvalidEl = firstInvalidEl || document.getElementById("f-last");
+    }
+
+    if (!val("f-company")) {
+      setFieldError("f-company", "Company name is required");
+      isValid = false;
+      firstInvalidEl = firstInvalidEl || document.getElementById("f-company");
+    }
+
+    if (!isValid) {
+      showModalAlert("Please fill in all required fields marked in red.", "error");
+      if (firstInvalidEl) firstInvalidEl.focus();
+      const modalBox = modal?.querySelector(".modal");
+      if (modalBox) {
+        modalBox.classList.add("shake");
+        setTimeout(() => modalBox.classList.remove("shake"), 400);
+      }
+    }
+
+    return isValid;
   }
 
   function updateUI() {
@@ -228,8 +345,8 @@ const isDev = import.meta.env.DEV;
     }
 
     const total =
-      TICKET_KEYS.reduce((sum, key) => sum + qty[key] * PRICES[key], 0) +
-      (lpDinner ? PRICES.lpDinner : 0);
+      TICKET_KEYS.reduce((sum, key) => sum + (qty[key] || 0) * (PRICES[key] || 0), 0) +
+      (lpDinner && qty.investor > 0 ? PRICES.lpDinner : 0);
 
     if (totalEl) totalEl.textContent = formatYen(total);
     if (continueBtn) continueBtn.disabled = total <= 0;
@@ -244,14 +361,16 @@ const isDev = import.meta.env.DEV;
   function closeModal() {
     if (modal) modal.classList.remove("open");
     document.body.style.overflow = "";
+    hideModalAlert();
   }
 
   function showStep(step) {
-    document.getElementById("step-1").classList.toggle("hidden", step !== 1);
-    document.getElementById("step-2").classList.toggle("hidden", step !== 2);
-    document.getElementById("step-3").classList.toggle("hidden", step !== 3);
-    document.getElementById("ttm-startup-extra")?.classList.toggle("hidden", qty.startup <= 0);
-    document.getElementById("ttm-investor-extra")?.classList.toggle("hidden", qty.investor <= 0);
+    document.getElementById("step-1")?.classList.toggle("hidden", step !== 1);
+    document.getElementById("step-2")?.classList.toggle("hidden", step !== 2);
+    document.getElementById("step-3")?.classList.toggle("hidden", step !== 3);
+    document.getElementById("ttm-startup-extra")?.classList.toggle("hidden", (qty.startup || 0) <= 0);
+    document.getElementById("ttm-investor-extra")?.classList.toggle("hidden", (qty.investor || 0) <= 0);
+    hideModalAlert();
   }
 
   function val(id) {
@@ -303,11 +422,17 @@ const isDev = import.meta.env.DEV;
     if (e.target === modal) closeModal();
   });
 
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modal?.classList.contains("open")) {
+      closeModal();
+    }
+  });
+
   document.querySelectorAll(".qty-btn[data-action]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const action = btn.dataset.action;
       const ticket = btn.dataset.ticket;
-      if (!ticket) return;
+      if (!ticket || !(ticket in qty)) return;
 
       if (action === "+") qty[ticket]++;
       if (action === "-" && qty[ticket] > 0) qty[ticket]--;
@@ -339,26 +464,29 @@ const isDev = import.meta.env.DEV;
 
   document.querySelectorAll(".radio-row span").forEach((span) => {
     span.addEventListener("click", () => {
-      span.parentElement.querySelectorAll("span").forEach((s) => s.classList.remove("sel"));
+      span.parentElement?.querySelectorAll("span").forEach((s) => s.classList.remove("sel"));
       span.classList.add("sel");
     });
   });
 
   document.getElementById("modal-pay")?.addEventListener("click", async () => {
+    if (!validateStep2()) return;
+
     const email = val("f-email");
     const name = (val("f-first") + " " + val("f-last")).trim();
     const company = val("f-company");
     const role = val("f-title");
     const payBtn = document.getElementById("modal-pay");
-    if (!email || !val("f-first") || !val("f-last") || !company) {
-      alert("Please fill email, name and company");
-      return;
-    }
+
+    if (!payBtn) return;
     payBtn.disabled = true;
-    payBtn.textContent = "Redirecting to Stripe…";
+    payBtn.innerHTML = '<span class="spinner" style="margin-right: 0.5rem;"></span> Preparing checkout…';
+
     try {
-      const supabaseUrl = window.SUPABASE_URL || "";
-      const supabaseKey = window.SUPABASE_ANON_KEY || "";
+      if (!navigator.onLine) {
+        throw new Error("You appear to be offline. Please check your internet connection.");
+      }
+
       const checkoutApi =
         window.STRIPE_API_URL ||
         (location.hostname === "localhost"
@@ -367,53 +495,46 @@ const isDev = import.meta.env.DEV;
 
       const registrationId = crypto.randomUUID();
       const tickets = { ...qty };
-      const total =
-        TICKET_KEYS.reduce((sum, key) => sum + qty[key] * PRICES[key], 0) +
-        (lpDinner && qty.investor > 0 ? PRICES.lpDinner : 0);
-
-      if (supabaseUrl && supabaseKey) {
-        const regRes = await fetch(supabaseUrl + "/rest/v1/registrations", {
-          method: "POST",
-          headers: {
-            apikey: supabaseKey,
-            Authorization: "Bearer " + supabaseKey,
-            "Content-Type": "application/json",
-            Prefer: "return=minimal",
-          },
-          body: JSON.stringify({
-            id: registrationId,
-            full_name: name,
-            email,
-            company,
-            role,
-            tickets,
-            total_amount: total,
-            currency: "jpy",
-            event_slug: "super-office-hours",
-            questionnaire: collectQuestionnaire(),
-            user_agent: navigator.userAgent,
-            referrer: document.referrer || null,
-          }),
-        });
-        if (!regRes.ok) throw new Error("Registration failed: " + (await regRes.text()));
-      }
+      const questionnaire = collectQuestionnaire();
 
       const res = await fetch(checkoutApi, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          registrationId,
           qty: tickets,
           email,
           name,
           company,
+          role,
+          questionnaire,
           lpDinner,
         }),
+        signal: AbortSignal.timeout(15000),
       });
-      const data = await res.json();
-      if (!res.ok || !data.url) throw new Error(data.error || "Checkout failed");
+
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("Unable to parse server response. Please try again.");
+      }
+
+      if (!res.ok || !data?.url) {
+        throw new Error(data?.error || `Checkout failed (${res.status}). Please try again.`);
+      }
+
       window.location.href = data.url;
     } catch (err) {
-      alert(err.message || "Could not start Stripe Checkout");
+      console.error("Checkout initiation error:", err);
+      let userMsg = err.message || "Could not connect to payment processor. Please try again.";
+      if (err.name === "TimeoutError" || err.name === "AbortError") {
+        userMsg = "Payment request timed out. Please check your connection and try again.";
+      }
+      showModalAlert(userMsg, "error");
+      if (window.showToast) {
+        window.showToast(userMsg, "error");
+      }
       payBtn.disabled = false;
       payBtn.textContent = "Proceed to payment";
     }
@@ -421,9 +542,25 @@ const isDev = import.meta.env.DEV;
 
   updateUI();
 
-  if (new URLSearchParams(location.search).get("paid") === "1") {
+  // URL Parameters Handling on Load
+  const searchParams = new URLSearchParams(location.search);
+  if (searchParams.get("paid") === "1") {
     openModal();
     showStep(3);
+    if (window.showToast) {
+      window.showToast("Payment successful! Confirmation email is on its way.", "success");
+    }
+    history.replaceState({}, "", location.pathname);
+  } else if (searchParams.get("canceled") === "1") {
+    if (window.showToast) {
+      window.showToast("Checkout was canceled. Your ticket selection is still saved.", "warning");
+    }
+    history.replaceState({}, "", location.pathname);
+  } else if (searchParams.get("error")) {
+    const errorMsg = searchParams.get("error");
+    if (window.showToast) {
+      window.showToast(decodeURIComponent(errorMsg), "error");
+    }
     history.replaceState({}, "", location.pathname);
   }
 </script>

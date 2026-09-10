@@ -2,6 +2,11 @@
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
 
-# Google Workspace SMTP (tickets@takeoff-tokyo.com) — use an App Password, not the account login password
-GMAIL_ADDRESS=
-GMAIL_APP_PASSWORD=
+# Brevo (formerly Sendinblue) Transactional Email API (https://app.brevo.com/settings/keys/api)
+BREVO_API_KEY=
+BREVO_SENDER_EMAIL=tickets@takeoff-tokyo.com
+BREVO_SENDER_NAME=Super Office Hours
+
+# Supabase (Project URL and Service Role / Secret key for backend writes)
+SUPABASE_URL=
+SUPABASE_SECRET_KEY=
