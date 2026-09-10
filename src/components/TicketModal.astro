@@ -4,7 +4,12 @@ interface Props {
 }
 
 const { showDebugTickets = false } = Astro.props;
-const isDev = import.meta.env.DEV || showDebugTickets;
+const isDev =
+  import.meta.env.DEV ||
+  import.meta.env.DEBUG === "true" ||
+  import.meta.env.PUBLIC_DEBUG === "true" ||
+  (typeof process !== "undefined" && (process.env?.DEBUG === "true" || process.env?.PUBLIC_DEBUG === "true")) ||
+  showDebugTickets;
 ---
 
 <div class="modal-overlay" id="ticket-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
@@ -20,7 +25,7 @@ const isDev = import.meta.env.DEV || showDebugTickets;
         <div class="ticket-row" data-ticket="test_taro">
           <div class="ticket-info">
             <div class="name">Taro ticket <span style="font-size: 0.75rem; color: var(--accent);">(Debug)</span></div>
-            <div class="price">¥50</div>
+            <div class="price">¥1</div>
           </div>
           <div class="qty-controls">
             <button type="button" class="qty-btn" data-action="-" data-ticket="test_taro">−</button>
@@ -206,12 +211,14 @@ const isDev = import.meta.env.DEV || showDebugTickets;
   const hasDebugRow = !!document.querySelector('.ticket-row[data-ticket="test_taro"]');
   const isDebug =
     import.meta.env.DEV ||
+    import.meta.env.DEBUG === "true" ||
+    import.meta.env.PUBLIC_DEBUG === "true" ||
     hasDebugRow ||
     window.ENABLE_DEBUG_TICKETS === true ||
     location.pathname.startsWith("/debug");
 
   const PRICES = {
-    ...(isDebug ? { test_taro: 50 } : {}),
+    ...(isDebug ? { test_taro: 1 } : {}),
     startup: 2500,
     investor: 5000,
     lpDinner: 25000,

@@ -68,6 +68,47 @@ describe("Stripe Checkout Creation & Redirects (functions/api/create-checkout.js
     assert.equal(body.error, "Test tickets are disabled in production");
   });
 
+  it("allows test_taro ticket (1 JPY) with sk_live_ key when DEBUG=true is set in env", async () => {
+    let capturedStripePayload = null;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (url, options) => {
+      if (typeof url === "string" && url.includes("api.stripe.com/v1/checkout/sessions")) {
+        capturedStripePayload = new URLSearchParams(options.body);
+        return new Response(JSON.stringify({ url: "https://checkout.stripe.com/c/pay/cs_live_sample" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return originalFetch(url, options);
+    };
+
+    try {
+      const context = {
+        env: {
+          STRIPE_SECRET_KEY: "sk_live_real_key_123",
+          DEBUG: "true",
+        },
+        request: new Request("https://preview.shipping-test.soh.takeoff-tokyo.com/api/create-checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: "tester@takeoff-tokyo.com", qty: { test_taro: 1 } }),
+        }),
+      };
+      const res = await createCheckoutPost(context);
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.equal(data.url, "https://checkout.stripe.com/c/pay/cs_live_sample");
+
+      // Verify line item unit_amount is 1 JPY
+      assert.equal(capturedStripePayload.get("line_items[0][quantity]"), "1");
+      assert.equal(capturedStripePayload.get("line_items[0][price_data][unit_amount]"), "1");
+      assert.equal(capturedStripePayload.get("line_items[0][price_data][currency]"), "jpy");
+      assert.equal(capturedStripePayload.get("line_items[0][price_data][product_data][name]"), "Taro ticket");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it("builds correct success_url, cancel_url and Stripe metadata based on request origin", async () => {
     let capturedStripePayload = null;
     let capturedStripeHeaders = null;
