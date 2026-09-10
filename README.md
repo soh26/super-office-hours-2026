@@ -35,23 +35,21 @@ Open **http://localhost:8787** (not 4321) to test the full checkout flow, since 
 
 ⚠️ Always double-check `.dev.vars` has a **test** Stripe secret key (`sk_test_...`) before testing — a live key (`sk_live_...`) will create real, chargeable checkout sessions even from localhost.
 
-### Ticket confirmation email
+### Ticket confirmation email (Brevo)
 
-After a successful payment, the buyer is redirected back to the site with a "You're in!" popup, and `functions/api/stripe-webhook.js` sends an HTML ticket confirmation email (styled to match the site) from `tickets@takeoff-tokyo.com` via Google Workspace SMTP, using [`worker-mailer`](https://github.com/zou-yu/worker-mailer). The email is triggered by a **Stripe webhook** (`checkout.session.completed`), not by the browser landing on the success page — that way the email still sends even if the buyer closes the tab, and it can't be triggered by just guessing a URL.
+After a successful payment, the buyer is redirected back to the site with a "You're in!" popup, and `functions/api/stripe-webhook.js` sends an HTML ticket confirmation email (styled to match the site) via **Brevo (formerly Sendinblue)**'s transactional email REST API. The email is triggered by a **Stripe webhook** (`checkout.session.completed`), not by the browser landing on the success page — that way the email still sends even if the buyer closes the tab, and it cannot be triggered by guessing URLs.
 
-Setup required (one-time, per environment):
+Setup required:
 
-1. **Cloudflare Pages compatibility flag** — `worker-mailer` needs Node API shims. In the Cloudflare Pages dashboard, go to **Settings → Functions → Compatibility flags** and add `nodejs_compat` for both **Production** and **Preview**. (Local dev already passes `--compatibility-flags nodejs_compat` via `npm run dev:functions`.)
-2. **Google Workspace App Password** — the `tickets@takeoff-tokyo.com` account needs 2-Step Verification enabled, then generate an [App Password](https://myaccount.google.com/apppasswords) for it. Set `GMAIL_ADDRESS` and `GMAIL_APP_PASSWORD` (the app password, not the login password) as env vars/secrets — locally in `.dev.vars`, in production as Cloudflare Pages secrets.
-3. **Stripe webhook** — in the Stripe Dashboard, add an endpoint pointing at `https://<your-domain>/api/stripe-webhook`, subscribed to the `checkout.session.completed` event. Copy its signing secret into `STRIPE_WEBHOOK_SECRET`.
+1. **Brevo Account & API Key** — Sign up for a free [Brevo account](https://www.brevo.com/) (300 free emails/day). Generate an API key under [Settings → SMTP & API](https://app.brevo.com/settings/keys/api). Add `BREVO_API_KEY` to `.dev.vars` (local) and Cloudflare Pages secrets (production).
+2. **Sender Email Authentication** — In Brevo, verify your sender email or domain (`tickets@takeoff-tokyo.com` or your company domain).
+3. **Stripe webhook** — In the Stripe Dashboard, add an endpoint pointing at `https://<your-domain>/api/stripe-webhook`, subscribed to the `checkout.session.completed` event. Copy its signing secret into `STRIPE_WEBHOOK_SECRET`.
 
-To test the webhook locally, use the [Stripe CLI](https://docs.stripe.com/stripe-cli) to forward events to your local wrangler instance (in a third terminal, alongside `npm run dev:functions`):
+To test the webhook locally, use the [Stripe CLI](https://docs.stripe.com/stripe-cli) to forward events to your local wrangler instance:
 
 ```bash
 stripe listen --forward-to localhost:8787/api/stripe-webhook
 ```
-
-`stripe listen` prints a webhook signing secret starting with `whsec_...` — use that as `STRIPE_WEBHOOK_SECRET` in `.dev.vars` while testing locally (it's different from the production endpoint's signing secret).
 
 ### Automated and Manual Email Tests
 
@@ -59,14 +57,14 @@ stripe listen --forward-to localhost:8787/api/stripe-webhook
    ```bash
    npm test
    ```
-   Runs unit tests verifying HTML/text email rendering, XSS escaping, currency formatting, and Stripe webhook email triggering.
+   Runs unit tests verifying HTML/text email rendering, Brevo API payload dispatch, Supabase records, and Stripe webhook handling.
 
-2. **Send a live test email via SMTP:**
+2. **Send a live test email via Brevo:**
    ```bash
    # Dry-run preview in terminal:
    npm run test:email -- --dry-run
 
-   # Send a real test email using .dev.vars credentials:
+   # Send a real test email using .dev.vars BREVO_API_KEY:
    npm run test:email -- your-email@example.com
    ```
 

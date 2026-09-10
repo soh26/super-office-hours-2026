@@ -1,10 +1,8 @@
 #!/usr/bin/env node
-import "../test/cf-sockets-shim.js";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { WorkerMailer } from "worker-mailer";
-import { buildConfirmationEmail } from "../functions/lib/email.js";
+import { buildConfirmationEmail, sendConfirmationEmailWithBrevo } from "../functions/lib/email.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
@@ -34,10 +32,9 @@ async function main() {
   const toArg = args.find((a) => a.startsWith("--to="))?.replace("--to=", "") || args[0];
   const isDryRun = args.includes("--dry-run");
 
-  const gmailAddress = env.GMAIL_ADDRESS;
-  const gmailAppPassword = env.GMAIL_APP_PASSWORD;
+  const apiKey = env.BREVO_API_KEY;
 
-  console.log("=== Super Office Hours — Email Test ===\n");
+  console.log("=== Super Office Hours — Brevo Email Test ===\n");
 
   const samplePayload = {
     name: "Taro Tester",
@@ -57,46 +54,35 @@ async function main() {
 
   if (isDryRun || !toArg) {
     console.log("ℹ️  Dry run completed (no email sent).");
-    console.log("To send an actual test email over SMTP, run:");
+    console.log("To send an actual test email via Brevo REST API, run:");
     console.log("  npm run test:email -- your-email@example.com\n");
     return;
   }
 
-  if (!gmailAddress || !gmailAppPassword || gmailAppPassword.startsWith("fake_")) {
-    console.error("❌ Error: GMAIL_ADDRESS and a valid GMAIL_APP_PASSWORD are required in .dev.vars to send live emails.");
+  if (!apiKey || apiKey.startsWith("fake_")) {
+    console.error("❌ Error: BREVO_API_KEY is required in .dev.vars to send live emails.");
+    console.error("Get your API key at: https://app.brevo.com/settings/keys/api");
     process.exit(1);
   }
 
-  console.log(`Connecting to smtp.gmail.com:465 as ${gmailAddress}...`);
+  console.log(`Sending confirmation email via Brevo API to ${toArg}...`);
   try {
-    const mailer = await WorkerMailer.connect({
-      credentials: {
-        username: gmailAddress,
-        password: gmailAppPassword,
-      },
-      authType: "login",
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
+    const res = await sendConfirmationEmailWithBrevo(env, {
+      to: toArg,
+      name: samplePayload.name,
+      lineItems: samplePayload.lineItems,
+      totalAmount: samplePayload.totalAmount,
     });
 
-    console.log(`Sending confirmation email to ${toArg}...`);
-    const res = await mailer.send({
-      from: { name: "Super Office Hours [TEST]", email: gmailAddress },
-      to: { name: samplePayload.name, email: toArg },
-      subject: "[TEST] Your Super Office Hours ticket",
-      html,
-      text,
-    });
-
-    console.log("✅ Email sent successfully!");
-    console.log("Response:", res);
-  } catch (err) {
-    console.error("❌ Failed to send email:", err.message);
-    if (err.message?.includes("Username and Password not accepted") || err.message?.includes("535")) {
-      console.error("\nTip: Make sure you have 2-Step Verification enabled and generated an App Password at:");
-      console.error("https://myaccount.google.com/apppasswords");
+    if (res) {
+      console.log("✅ Email sent successfully via Brevo!");
+      console.log("Message ID:", res.messageId || res);
+    } else {
+      console.error("❌ Failed to send email via Brevo. Check console logs above.");
+      process.exit(1);
     }
+  } catch (err) {
+    console.error("❌ Unexpected error:", err.message);
     process.exit(1);
   }
 }

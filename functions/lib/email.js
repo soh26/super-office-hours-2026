@@ -113,3 +113,60 @@ Questions? Reply to this email — we're happy to help.
 
   return { html, text };
 }
+
+/**
+ * Sends confirmation email using Brevo (formerly Sendinblue) Transactional Email API.
+ */
+export async function sendConfirmationEmailWithBrevo(
+  env,
+  { to, name, lineItems = [], totalAmount = 0 },
+  fetchFn = fetch
+) {
+  const apiKey = (env.BREVO_API_KEY || "").trim();
+  if (!apiKey) {
+    console.warn("[Brevo] Skipping email confirmation: BREVO_API_KEY is not set.");
+    return null;
+  }
+
+  const senderEmail = env.BREVO_SENDER_EMAIL || "tickets@takeoff-tokyo.com";
+  const senderName = env.BREVO_SENDER_NAME || "Super Office Hours";
+
+  const { html, text } = buildConfirmationEmail({
+    name,
+    lineItems,
+    totalAmount,
+  });
+
+  const payload = {
+    sender: { name: senderName, email: senderEmail },
+    to: [{ email: to, name: name || undefined }],
+    subject: "Your Super Office Hours ticket",
+    htmlContent: html,
+    textContent: text,
+  };
+
+  try {
+    const res = await fetchFn("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "api-key": apiKey,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errBody = await res.text();
+      console.error(`[Brevo] Failed to send email (HTTP ${res.status}): ${errBody}`);
+      return null;
+    }
+
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.error("[Brevo] Network error sending email:", err.message);
+    return null;
+  }
+}
+

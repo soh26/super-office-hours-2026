@@ -15,8 +15,7 @@
   },
   "dependencies": {
     "astro": "^5.0.0",
-    "stripe": "^22.6.0",
-    "worker-mailer": "^1.2.1"
+    "stripe": "^22.6.0"
   },
   "devDependencies": {
     "wrangler": "^4.130.0"

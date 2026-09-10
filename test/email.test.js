@@ -1,7 +1,11 @@
-import "./cf-sockets-shim.js";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { formatYen, escapeHtml, buildConfirmationEmail } from "../functions/lib/email.js";
+import {
+  formatYen,
+  escapeHtml,
+  buildConfirmationEmail,
+  sendConfirmationEmailWithBrevo,
+} from "../functions/lib/email.js";
 import { sendTicketConfirmation } from "../functions/api/stripe-webhook.js";
 
 describe("Email Template Helper (functions/lib/email.js)", () => {
@@ -61,6 +65,57 @@ describe("Email Template Helper (functions/lib/email.js)", () => {
     assert.match(html, /Hi there,/);
     assert.match(text, /Hi there,/);
   });
+
+  it("sendConfirmationEmailWithBrevo skips sending if BREVO_API_KEY is missing", async () => {
+    const res = await sendConfirmationEmailWithBrevo({}, { to: "user@example.com" });
+    assert.equal(res, null);
+  });
+
+  it("sendConfirmationEmailWithBrevo formats request and dispatches to Brevo API", async () => {
+    let calledUrl = null;
+    let calledOptions = null;
+
+    const mockFetch = async (url, options) => {
+      calledUrl = url;
+      calledOptions = options;
+      return {
+        ok: true,
+        status: 201,
+        json: async () => ({ messageId: "<brevo-msg-id-123@brevo.com>" }),
+      };
+    };
+
+    const env = {
+      BREVO_API_KEY: "xkeysib-test-api-key-999",
+      BREVO_SENDER_EMAIL: "tickets@takeoff-tokyo.com",
+      BREVO_SENDER_NAME: "Super Office Hours",
+    };
+
+    const result = await sendConfirmationEmailWithBrevo(
+      env,
+      {
+        to: "attendee@example.com",
+        name: "Kenji Sato",
+        lineItems: [{ description: "Startup ticket", quantity: 1, amount_total: 2500 }],
+        totalAmount: 2500,
+      },
+      mockFetch
+    );
+
+    assert.equal(calledUrl, "https://api.brevo.com/v3/smtp/email");
+    assert.equal(calledOptions.method, "POST");
+    assert.equal(calledOptions.headers["api-key"], "xkeysib-test-api-key-999");
+    assert.equal(calledOptions.headers["Content-Type"], "application/json");
+
+    const sentBody = JSON.parse(calledOptions.body);
+    assert.deepEqual(sentBody.sender, { name: "Super Office Hours", email: "tickets@takeoff-tokyo.com" });
+    assert.deepEqual(sentBody.to, [{ email: "attendee@example.com", name: "Kenji Sato" }]);
+    assert.equal(sentBody.subject, "Your Super Office Hours ticket");
+    assert.match(sentBody.htmlContent, /Hi Kenji Sato,/);
+    assert.match(sentBody.textContent, /Hi Kenji Sato,/);
+
+    assert.deepEqual(result, { messageId: "<brevo-msg-id-123@brevo.com>" });
+  });
 });
 
 describe("Stripe Confirmation Sender (functions/api/stripe-webhook.js)", () => {
@@ -77,20 +132,19 @@ describe("Stripe Confirmation Sender (functions/api/stripe-webhook.js)", () => {
     assert.equal(result, null);
   });
 
-  it("sendTicketConfirmation fetches line items and dispatches email via WorkerMailer", async () => {
-    let connectCalledWith = null;
-    let sendCalledWith = null;
+  it("sendTicketConfirmation fetches line items and dispatches email via Brevo", async () => {
+    let calledUrl = null;
+    let calledOptions = null;
 
-    class MockWorkerMailer {
-      static async connect(config) {
-        connectCalledWith = config;
-        return new MockWorkerMailer();
-      }
-      async send(payload) {
-        sendCalledWith = payload;
-        return { messageId: "<test-id@takeoff-tokyo.com>" };
-      }
-    }
+    const mockFetch = async (url, options) => {
+      calledUrl = url;
+      calledOptions = options;
+      return {
+        ok: true,
+        status: 201,
+        json: async () => ({ messageId: "<brevo-confirm-id@takeoff-tokyo.com>" }),
+      };
+    };
 
     const mockStripe = {
       checkout: {
@@ -109,8 +163,8 @@ describe("Stripe Confirmation Sender (functions/api/stripe-webhook.js)", () => {
     };
 
     const mockEnv = {
-      GMAIL_ADDRESS: "tickets@takeoff-tokyo.com",
-      GMAIL_APP_PASSWORD: "secret_app_password",
+      BREVO_API_KEY: "xkeysib-test-key",
+      BREVO_SENDER_EMAIL: "tickets@takeoff-tokyo.com",
     };
 
     const mockSession = {
@@ -120,34 +174,16 @@ describe("Stripe Confirmation Sender (functions/api/stripe-webhook.js)", () => {
       amount_total: 5000,
     };
 
-    const res = await sendTicketConfirmation(
-      mockStripe,
-      mockEnv,
-      mockSession,
-      MockWorkerMailer
-    );
-
-    assert.equal(res.messageId, "<test-id@takeoff-tokyo.com>");
-
-    // Check connection credentials
-    assert.deepEqual(connectCalledWith, {
-      credentials: {
-        username: "tickets@takeoff-tokyo.com",
-        password: "secret_app_password",
-      },
-      authType: "login",
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
+    const res = await sendTicketConfirmation(mockStripe, mockEnv, mockSession, {
+      fetchFn: mockFetch,
     });
 
-    // Check sent email parameters
-    assert.equal(sendCalledWith.from.name, "Super Office Hours");
-    assert.equal(sendCalledWith.from.email, "tickets@takeoff-tokyo.com");
-    assert.equal(sendCalledWith.to.name, "Bob Sato");
-    assert.equal(sendCalledWith.to.email, "buyer@example.com");
-    assert.equal(sendCalledWith.subject, "Your Super Office Hours ticket");
-    assert.match(sendCalledWith.html, /Hi Bob Sato,/);
-    assert.match(sendCalledWith.text, /Hi Bob Sato,/);
+    assert.equal(res.messageId, "<brevo-confirm-id@takeoff-tokyo.com>");
+    assert.equal(calledUrl, "https://api.brevo.com/v3/smtp/email");
+    assert.equal(calledOptions.headers["api-key"], "xkeysib-test-key");
+
+    const sentBody = JSON.parse(calledOptions.body);
+    assert.deepEqual(sentBody.to, [{ email: "buyer@example.com", name: "Bob Sato" }]);
+    assert.match(sentBody.htmlContent, /Hi Bob Sato,/);
   });
 });

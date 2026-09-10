@@ -1,6 +1,5 @@
 import Stripe from "stripe";
-import { WorkerMailer } from "worker-mailer";
-import { buildConfirmationEmail } from "../lib/email.js";
+import { sendConfirmationEmailWithBrevo } from "../lib/email.js";
 import { recordPaidRegistration } from "../lib/supabase.js";
 
 export async function onRequestPost(context) {
@@ -47,7 +46,7 @@ export async function onRequestPost(context) {
       console.error("Failed to record paid registration in Supabase:", err);
     }
 
-    // 2. Send HTML confirmation email
+    // 2. Send HTML confirmation email via Brevo
     try {
       await sendTicketConfirmation(stripe, env, session, { lineItems });
     } catch (err) {
@@ -64,47 +63,27 @@ export async function onRequestPost(context) {
 }
 
 export async function sendTicketConfirmation(stripe, env, session, options = {}) {
-  // Support legacy signature (stripe, env, session, MailerClass) or options object
-  const MailerClass = typeof options === "function" ? options : options.MailerClass || WorkerMailer;
   const preloadedLineItems = options && typeof options === "object" ? options.lineItems : null;
-
   const email = session.customer_details?.email || session.customer_email || session.metadata?.email;
   if (!email) return null;
 
-  if (!env.GMAIL_ADDRESS || !env.GMAIL_APP_PASSWORD) {
-    console.warn("[Stripe Webhook] Skipping confirmation email: GMAIL_ADDRESS or GMAIL_APP_PASSWORD not set");
-    return null;
-  }
-
   const name = session.metadata?.name || session.customer_details?.name || "";
   let lineItemsData = preloadedLineItems;
-  if (!lineItemsData) {
+  if (!lineItemsData && stripe?.checkout?.sessions?.listLineItems) {
     const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 20 });
     lineItemsData = lineItems.data;
   }
 
-  const { html, text } = buildConfirmationEmail({
-    name,
-    lineItems: lineItemsData,
-    totalAmount: session.amount_total,
-  });
+  const fetchFn = typeof options === "object" && options.fetchFn ? options.fetchFn : fetch;
 
-  const mailer = await MailerClass.connect({
-    credentials: {
-      username: env.GMAIL_ADDRESS,
-      password: env.GMAIL_APP_PASSWORD,
+  return await sendConfirmationEmailWithBrevo(
+    env,
+    {
+      to: email,
+      name,
+      lineItems: lineItemsData || [],
+      totalAmount: session.amount_total,
     },
-    authType: "login",
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-  });
-
-  return await mailer.send({
-    from: { name: "Super Office Hours", email: env.GMAIL_ADDRESS },
-    to: { name, email },
-    subject: "Your Super Office Hours ticket",
-    html,
-    text,
-  });
+    fetchFn
+  );
 }
