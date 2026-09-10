@@ -1,5 +1,10 @@
 ---
-const isDev = import.meta.env.DEV;
+interface Props {
+  showDebugTickets?: boolean;
+}
+
+const { showDebugTickets = false } = Astro.props;
+const isDev = import.meta.env.DEV || showDebugTickets;
 ---
 
 <section class="section" id="tickets">

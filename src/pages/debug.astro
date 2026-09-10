@@ -1,0 +1,128 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import Hero from "../components/Hero.astro";
+import WhatYouGet from "../components/WhatYouGet.astro";
+import Story from "../components/Story.astro";
+import Tickets from "../components/Tickets.astro";
+import Footer from "../components/Footer.astro";
+import TicketModal from "../components/TicketModal.astro";
+---
+
+<Layout title="[DEBUG MODE] Super Office Hours — Sandbox & Test Suite">
+  <!-- Debug Control Banner -->
+  <div class="debug-banner">
+    <div class="container debug-banner-inner">
+      <div class="debug-badge">
+        <span class="debug-dot"></span>
+        <strong>DEBUG / SANDBOX MODE</strong>
+      </div>
+      <div class="debug-desc">
+        Taro Test Ticket (¥50) is active. Stripe sandbox checkouts and webhook simulations are enabled.
+      </div>
+      <div class="debug-actions">
+        <button type="button" class="btn btn-sm btn-accent open-modal-btn">
+          Test Buy Flow
+        </button>
+        <a href="/" class="debug-link">Exit Debug Mode &rarr;</a>
+      </div>
+    </div>
+  </div>
+
+  <Header />
+  <main>
+    <Hero />
+    <WhatYouGet />
+    <Story />
+    <Tickets showDebugTickets={true} />
+  </main>
+  <Footer />
+  <TicketModal showDebugTickets={true} />
+</Layout>
+
+<style>
+  .debug-banner {
+    background: #181524;
+    border-bottom: 1px solid rgba(168, 85, 247, 0.4);
+    padding: 0.6rem 0;
+    font-size: 0.85rem;
+    position: sticky;
+    top: 0;
+    z-index: 150;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .debug-banner-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .debug-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    background: rgba(168, 85, 247, 0.2);
+    border: 1px solid rgba(168, 85, 247, 0.4);
+    color: #c084fc;
+    padding: 0.25rem 0.65rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+  }
+
+  .debug-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #c084fc;
+    box-shadow: 0 0 8px #c084fc;
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+  }
+
+  .debug-desc {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.8rem;
+    flex: 1;
+    min-width: 260px;
+  }
+
+  .debug-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .btn-sm {
+    padding: 0.35rem 0.85rem;
+    font-size: 0.8rem;
+    border-radius: 9999px;
+  }
+
+  .btn-accent {
+    background: #a855f7;
+    color: white;
+  }
+
+  .btn-accent:hover {
+    background: #9333ea;
+  }
+
+  .debug-link {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    transition: color 0.15s ease;
+  }
+
+  .debug-link:hover {
+    color: white;
+  }
+</style>
