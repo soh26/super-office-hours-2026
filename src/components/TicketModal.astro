@@ -1,5 +1,10 @@
 ---
-const isDev = import.meta.env.DEV;
+interface Props {
+  showDebugTickets?: boolean;
+}
+
+const { showDebugTickets = false } = Astro.props;
+const isDev = import.meta.env.DEV || showDebugTickets;
 ---
 
 <div class="modal-overlay" id="ticket-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
@@ -198,9 +203,15 @@ const isDev = import.meta.env.DEV;
 
 <script>
   // @ts-nocheck
-  const isDev = import.meta.env.DEV;
+  const hasDebugRow = !!document.querySelector('.ticket-row[data-ticket="test_taro"]');
+  const isDebug =
+    import.meta.env.DEV ||
+    hasDebugRow ||
+    window.ENABLE_DEBUG_TICKETS === true ||
+    location.pathname.startsWith("/debug");
+
   const PRICES = {
-    ...(isDev ? { test_taro: 50 } : {}),
+    ...(isDebug ? { test_taro: 50 } : {}),
     startup: 2500,
     investor: 5000,
     lpDinner: 25000,
