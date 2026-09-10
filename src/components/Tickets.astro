@@ -4,7 +4,12 @@ interface Props {
 }
 
 const { showDebugTickets = false } = Astro.props;
-const isDev = import.meta.env.DEV || showDebugTickets;
+const isDev =
+  import.meta.env.DEV ||
+  import.meta.env.DEBUG === "true" ||
+  import.meta.env.PUBLIC_DEBUG === "true" ||
+  (typeof process !== "undefined" && (process.env?.DEBUG === "true" || process.env?.PUBLIC_DEBUG === "true")) ||
+  showDebugTickets;
 ---
 
 <section class="section" id="tickets">
@@ -14,10 +19,10 @@ const isDev = import.meta.env.DEV || showDebugTickets;
     <div class="ticket-cards">
       {isDev && (
         <div class="ticket-card" style="border-style: dashed; border-color: rgba(255, 255, 255, 0.2);">
-          <div style="font-size: 0.85rem; color: var(--text-muted);">Test Taro (Debug)</div>
+          <div style="font-size: 0.85rem; color: var(--accent);">Test Taro (Debug)</div>
           <div class="price">¥50</div>
           <ul>
-            <li>Debug testing ticket</li>
+            <li>Debug testing ticket (50 JPY)</li>
           </ul>
           <button type="button" class="btn btn-secondary open-modal-btn" style="width: 100%;">
             Get taro ticket

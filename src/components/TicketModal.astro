@@ -4,7 +4,12 @@ interface Props {
 }
 
 const { showDebugTickets = false } = Astro.props;
-const isDev = import.meta.env.DEV || showDebugTickets;
+const isDev =
+  import.meta.env.DEV ||
+  import.meta.env.DEBUG === "true" ||
+  import.meta.env.PUBLIC_DEBUG === "true" ||
+  (typeof process !== "undefined" && (process.env?.DEBUG === "true" || process.env?.PUBLIC_DEBUG === "true")) ||
+  showDebugTickets;
 ---
 
 <div class="modal-overlay" id="ticket-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
@@ -206,6 +211,8 @@ const isDev = import.meta.env.DEV || showDebugTickets;
   const hasDebugRow = !!document.querySelector('.ticket-row[data-ticket="test_taro"]');
   const isDebug =
     import.meta.env.DEV ||
+    import.meta.env.DEBUG === "true" ||
+    import.meta.env.PUBLIC_DEBUG === "true" ||
     hasDebugRow ||
     window.ENABLE_DEBUG_TICKETS === true ||
     location.pathname.startsWith("/debug");
