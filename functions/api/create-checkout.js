@@ -1,3 +1,5 @@
+import { createPendingRegistration } from "../lib/supabase.js";
+
 const PRICES = {
   test_taro: { amount: 50, name: "Taro ticket" },
   startup: { amount: 2500, name: "Startup ticket" },
@@ -29,6 +31,9 @@ export async function onRequestPost(context) {
   const email = String(body.email || "").trim();
   const name = String(body.name || "").trim();
   const company = String(body.company || "").trim();
+  const role = String(body.role || "").trim();
+  const questionnaire = body.questionnaire || {};
+  const registrationId = body.registrationId || crypto.randomUUID();
   const lpDinner = Boolean(body.lpDinner);
 
   if (!email) return json({ error: "Email required" }, 400);
@@ -44,21 +49,25 @@ export async function onRequestPost(context) {
 
   const allowedKeys = isDebug ? ["test_taro", "startup", "investor"] : ["startup", "investor"];
 
+  let totalAmount = 0;
   const line_items = [];
   for (const key of allowedKeys) {
     const count = Number(qty[key] || 0);
     if (count > 0) {
+      const itemAmount = PRICES[key].amount;
+      totalAmount += count * itemAmount;
       line_items.push({
         quantity: count,
         price_data: {
           currency: "jpy",
-          unit_amount: PRICES[key].amount,
+          unit_amount: itemAmount,
           product_data: { name: PRICES[key].name },
         },
       });
     }
   }
   if (lpDinner && Number(qty.investor || 0) > 0) {
+    totalAmount += PRICES.lpDinner.amount;
     line_items.push({
       quantity: 1,
       price_data: {
@@ -69,6 +78,20 @@ export async function onRequestPost(context) {
     });
   }
   if (!line_items.length) return json({ error: "No tickets selected" }, 400);
+
+  // Attempt to create a pending registration record in Supabase (if configured)
+  await createPendingRegistration(context.env, {
+    id: registrationId,
+    name,
+    email,
+    company,
+    role,
+    tickets: qty,
+    totalAmount,
+    questionnaire,
+    userAgent: context.request.headers.get("user-agent"),
+    referrer: context.request.headers.get("referer"),
+  });
 
   const origin = new URL(context.request.url).origin;
 
@@ -83,8 +106,10 @@ export async function onRequestPost(context) {
       customer_email: email,
       success_url: `${origin}/?paid=1&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/?canceled=1`,
+      "metadata[registration_id]": registrationId,
       "metadata[name]": name,
       "metadata[company]": company,
+      "metadata[role]": role,
       "metadata[email]": email,
       ...flattenLineItems(line_items),
     }),

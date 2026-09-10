@@ -5,9 +5,9 @@ Clean Astro rebuild of https://soh.takeoff-tokyo.com/
 ## Stack
 
 - **Astro** – frontend
-- **Cloudflare Pages** – hosting (recommended)
-- **Supabase** – database / registrations (next step)
-- **Stripe** – payments (next step)
+- **Cloudflare Pages** – hosting & serverless functions
+- **Supabase** – database / registrations & questionnaire
+- **Stripe** – payments & webhooks
 
 ## Getting started
 
@@ -70,9 +70,24 @@ stripe listen --forward-to localhost:8787/api/stripe-webhook
    npm run test:email -- your-email@example.com
    ```
 
+3. **Test Stripe Webhook Signature & Delivery:**
+   ```bash
+   # Dispatch a signed test checkout.session.completed event to local server:
+   npm run test:webhook
+   ```
+
+### Supabase Setup
+
+1. In your [Supabase Dashboard](https://supabase.com/dashboard), open the **SQL Editor** and run the contents of [`supabase/schema.sql`](file:///home/tk240009/dev/random/soh/supabase/schema.sql) to create the `registrations` table, indexes, and triggers.
+2. In **Project Settings → API**, copy your **Project URL** and **`service_role`** secret key.
+3. Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to `.dev.vars` (locally) and to Cloudflare Pages Environment Variables (production).
+
 ## Project structure
 
 ```
+supabase/
+└── schema.sql           ← PostgreSQL table schema, indexes, and RLS policies
+
 src/
 ├── components/
 │   ├── Header.astro
@@ -81,7 +96,7 @@ src/
 │   ├── Story.astro
 │   ├── Tickets.astro
 │   ├── Footer.astro
-│   └── TicketModal.astro   ← multi-step ticket flow
+│   └── TicketModal.astro   ← multi-step ticket & questionnaire flow
 ├── layouts/
 │   └── Layout.astro
 ├── pages/
@@ -91,10 +106,11 @@ src/
 
 functions/
 ├── api/
-│   ├── create-checkout.js   ← creates the Stripe Checkout session
-│   └── stripe-webhook.js    ← verifies the webhook, sends the confirmation email
+│   ├── create-checkout.js   ← creates pending registration & Stripe Checkout session
+│   └── stripe-webhook.js    ← verifies webhook, marks registration paid, sends confirmation email
 └── lib/
-    └── email.js             ← HTML/text confirmation email template
+    ├── email.js             ← HTML/text confirmation email template
+    └── supabase.js          ← fetch-based Supabase PostgREST client
 ```
 
 ## Current features
@@ -108,15 +124,8 @@ functions/
 - Multi-step TicketModal:
   - Quantity selectors for Startup / Investor
   - Optional LP Dinner (¥25,000) when Investor selected
-  - Contact form step
+  - Contact form + startup/investor questionnaire
   - Confirmation step, also shown automatically on redirect back from Stripe (`?paid=1`)
-- Stripe Checkout + webhook-driven HTML ticket confirmation email (see above)
+- Stripe Checkout + webhook-driven HTML ticket confirmation email
+- Supabase persistent storage for pending and paid registrations
 
-## Next steps (tell me which one)
-
-1. Closer visual match + real images
-2. Supabase schema + save registrations
-3. Entry QR code + check-in tooling (explicitly out of scope for now)
-4. Sector questionnaire (Yes/No like original)
-
-Just say the number or describe what you want next.
