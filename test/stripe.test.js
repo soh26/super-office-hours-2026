@@ -68,7 +68,7 @@ describe("Stripe Checkout Creation & Redirects (functions/api/create-checkout.js
     assert.equal(body.error, "Test tickets are disabled in production");
   });
 
-  it("allows test_taro ticket (1 JPY) with sk_live_ key when DEBUG=true is set in env", async () => {
+  it("allows test_taro ticket (50 JPY) with sk_live_ key when DEBUG=true is set in env", async () => {
     let capturedStripePayload = null;
     const originalFetch = globalThis.fetch;
     globalThis.fetch = async (url, options) => {
@@ -99,9 +99,9 @@ describe("Stripe Checkout Creation & Redirects (functions/api/create-checkout.js
       const data = await res.json();
       assert.equal(data.url, "https://checkout.stripe.com/c/pay/cs_live_sample");
 
-      // Verify line item unit_amount is 1 JPY
+      // Verify line item unit_amount is 50 JPY
       assert.equal(capturedStripePayload.get("line_items[0][quantity]"), "1");
-      assert.equal(capturedStripePayload.get("line_items[0][price_data][unit_amount]"), "1");
+      assert.equal(capturedStripePayload.get("line_items[0][price_data][unit_amount]"), "50");
       assert.equal(capturedStripePayload.get("line_items[0][price_data][currency]"), "jpy");
       assert.equal(capturedStripePayload.get("line_items[0][price_data][product_data][name]"), "Taro ticket");
     } finally {

@@ -1,7 +1,7 @@
 import { createPendingRegistration } from "../lib/supabase.js";
 
 const PRICES = {
-  test_taro: { amount: 1, name: "Taro ticket" },
+  test_taro: { amount: 50, name: "Taro ticket" },
   startup: { amount: 2500, name: "Startup ticket" },
   investor: { amount: 5000, name: "Investor ticket" },
   lpDinner: { amount: 25000, name: "LP Dinner (Sep 24)" },

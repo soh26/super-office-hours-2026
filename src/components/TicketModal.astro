@@ -25,7 +25,7 @@ const isDev =
         <div class="ticket-row" data-ticket="test_taro">
           <div class="ticket-info">
             <div class="name">Taro ticket <span style="font-size: 0.75rem; color: var(--accent);">(Debug)</span></div>
-            <div class="price">¥1</div>
+            <div class="price">¥50</div>
           </div>
           <div class="qty-controls">
             <button type="button" class="qty-btn" data-action="-" data-ticket="test_taro">−</button>
@@ -218,7 +218,7 @@ const isDev =
     location.pathname.startsWith("/debug");
 
   const PRICES = {
-    ...(isDebug ? { test_taro: 1 } : {}),
+    ...(isDebug ? { test_taro: 50 } : {}),
     startup: 2500,
     investor: 5000,
     lpDinner: 25000,
