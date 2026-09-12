@@ -246,12 +246,14 @@ button {
 }
 
 .stat-value {
-  font-size: 1.75rem;
+  font-family: "TT Lakes Neue Expanded", "Barlow Condensed", sans-serif;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  font-stretch: 125%;
 }
 
+
 .stat-label {
+  font-family: Inter, sans-serif; /* keep body font on the small captions */
   font-size: 0.8rem;
   color: var(--text-dim);
   margin-top: 0.15rem;
