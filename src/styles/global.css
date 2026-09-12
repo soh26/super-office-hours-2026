@@ -276,7 +276,6 @@ button {
 }
 
 .who-tile {
-  background: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -284,7 +283,7 @@ button {
   padding: 16px;
   border: 1px solid var(--border, #2a2a35);
   border-radius: 12px;
-  background: #14141c;
+  background: #fff;
 }
 
 .who-tile img {
