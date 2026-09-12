@@ -1,0 +1,33 @@
+---
+const startups = [
+  { name: "Acme", src: "/images/logos/startups/acme.png" },
+  { name: "Other", src: "/images/logos/startups/other.png" },
+];
+const investors = [
+  { name: "Sequoia", src: "/images/logos/investors/sequoia.png" },
+];
+---
+
+<section class="section" id="who">
+  <div class="container">
+    <h2 class="section-title">Who's joining?</h2>
+
+    <h3 class="who-label">Startups</h3>
+    <div class="who-grid">
+      {startups.map((c) => (
+        <div class="who-tile">
+          <img src={c.src} alt={c.name} />
+        </div>
+      ))}
+    </div>
+
+    <h3 class="who-label">Investors</h3>
+    <div class="who-grid">
+      {investors.map((c) => (
+        <div class="who-tile">
+          <img src={c.src} alt={c.name} />
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
