@@ -344,36 +344,32 @@ button {
 }
 
 /* Story section */
-.story {
-  max-width: 720px;
-  margin: 0 auto;
-  text-align: center;
-}
 
-.story p {
-  color: var(--text-muted);
-  font-size: 1.05rem;
-  line-height: 1.7;
-  margin-bottom: 1.25rem;
-}
-
-.story-photos {
+.story-top {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 2rem;
+  gap: 24px;
+  align-items: start;
 }
 
-.story-photos figure:first-child {
-  grid-column: 1 / -1;
-}
-
-.story-photos img {
+.story-side img,
+.story-wide img {
   width: 100%;
   height: auto;
   border-radius: 12px;
   display: block;
 }
+
+.story-wide {
+  margin-top: 16px;
+}
+
+@media (max-width: 700px) {
+  .story-top {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Tickets */
 .ticket-cards {
   display: grid;
