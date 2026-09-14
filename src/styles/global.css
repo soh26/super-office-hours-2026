@@ -357,6 +357,27 @@ button {
   margin-bottom: 1.25rem;
 }
 
+.story-photos {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 2rem;
+}
+
+.story-photos img {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .story-photos {
+    grid-template-columns: 1.2fr 1fr 1fr;
+    align-items: start;
+  }
+}
+
 /* Tickets */
 .ticket-cards {
   display: grid;
