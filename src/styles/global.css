@@ -206,8 +206,16 @@ button {
   font-size: 0.9rem;
   color: var(--text-muted);
   margin-bottom: 1.75rem;
+  flex-wrap: wrap;
 }
 
+
+.hero-badge-logo {
+  height: 14px;
+  width: auto;
+  display: inline-block;
+  vertical-align: middle;
+}
 
 .hero-title {
   font-family: "TT Lakes Neue Expanded", "Barlow Condensed", sans-serif;
