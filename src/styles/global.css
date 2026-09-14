@@ -145,7 +145,7 @@ button {
 }
 
 .logo img {
-  height: calc(28px * 0.8); /* if current height is 28px */
+  height: calc(28px * 0.99); /* if current height is 28px */
   width: auto;
   display: block;
 }
