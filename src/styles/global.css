@@ -213,6 +213,7 @@ button {
   font-family: "TT Lakes Neue Expanded", "Barlow Condensed", sans-serif;
   font-weight: 900;
   font-stretch: 125%;
+  font-size: 1.5em;
   text-transform: uppercase;
   line-height: 1.05;
   letter-spacing: -0.02em;
