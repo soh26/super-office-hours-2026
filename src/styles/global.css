@@ -290,7 +290,7 @@ button {
 
 .who-grid {
   display: grid;
-  grid-template-columns: rrepeat(6, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 12px;
 }
 
