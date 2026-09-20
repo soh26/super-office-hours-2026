@@ -1,0 +1,50 @@
+---
+interface Partner {
+  name: string;
+  fullName: string;
+  url: string;
+  src: string;
+}
+
+const partners: Partner[] = [
+  {
+    name: "Digital Garage",
+    fullName: "株式会社デジタルガレージ (Digital Garage, Inc.)",
+    url: "https://www.garage.co.jp/",
+    src: "/images/logos/investors/dg.png",
+  },
+  {
+    name: "ReSpark",
+    fullName: "株式会社SAINOMENT (SAINOMENT Inc.) / ReSpark",
+    url: "https://respark-en.com/",
+    src: "/images/logos/startups/respark.png",
+  },
+  {
+    name: "Deel",
+    fullName: "Deel",
+    url: "https://www.deel.com/",
+    src: "/images/logos/startups/deel.svg",
+  },
+];
+---
+
+<section class="section" id="partners">
+  <div class="container">
+    <h2 class="section-title">In partnership with</h2>
+
+    <div class="partner-grid">
+      {partners.map((p) => (
+        <a
+          class="partner-tile"
+          href={p.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={p.fullName}
+          aria-label={p.fullName}
+        >
+          <img src={p.src} alt={p.name} />
+        </a>
+      ))}
+    </div>
+  </div>
+</section>
