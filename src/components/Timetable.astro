@@ -1,4 +1,17 @@
 ---
+import TimetableGrid from "./TimetableGrid.astro";
+
+const timetableColumns = [
+  { key: "stage", label: "Stage" },
+  { key: "table1", label: "MTG Table 1" },
+  { key: "table2", label: "MTG Table 2" },
+  { key: "table3", label: "MTG Table 3" },
+  { key: "table4", label: "MTG Table 4" },
+  { key: "table5", label: "MTG Table 5" },
+  { key: "table6", label: "MTG Table 6" },
+  { key: "table7", label: "MTG Table 7" },
+];
+
 const timeRows = [
   { start: "9:00", end: "10:00" },
   { start: "10:00", end: "11:00" },
@@ -12,136 +25,59 @@ const timeRows = [
   { start: "18:00", end: "21:00" },
 ];
 
+const meetingSessions = [
+  { column: "table1", start: "10:00", end: "11:00", title: "Akihiko Okamoto", logo: "/images/logos/investors/headline.png" },
+  { column: "table1", start: "11:00", end: "12:00", title: "Seiya Takahashi", logo: "" },
+  { column: "table1", start: "12:00", end: "14:00", title: "Haruno Oohashi", logo: "/images/logos/investors/apollo.png" },
+  { column: "table1", start: "14:00", end: "15:00", title: "Nonaka Sayuri", logo: "/images/logos/investors/greatwave.png" },
+  { column: "table1", start: "15:00", end: "16:00", title: "Nakamura Masato", logo: "/images/logos/investors/partnersfund.png" },
+  { column: "table1", start: "16:00", end: "17:00", title: "Kitahara Hirokazu", logo: "/images/logos/investors/archetype.png" },
+  { column: "table2", start: "9:00", end: "11:00", title: "Kazuhide Hashida", logo: "/images/logos/investors/oasis.png" },
+  { column: "table2", start: "12:00", end: "13:00", title: "Jordan Fisher", logo: "/images/logos/investors/antler.png" },
+  { column: "table2", start: "13:00", end: "15:00", title: "Hiroki Yamamoto", logo: "/images/logos/investors/spiralcapital.png" },
+  { column: "table2", start: "15:00", end: "17:00", title: "Reinaldo Normand", logo: "/images/logos/investors/niuventures.png" },
+  { column: "table3", start: "10:00", end: "12:00", title: "Tim Bailey", logo: "/images/logos/investors/akaiwagon.png" },
+  { column: "table3", start: "12:00", end: "13:00", title: "Ken Yasuanga", logo: "/images/logos/investors/ghovc.png" },
+  { column: "table3", start: "13:00", end: "15:00", title: "Florian Geier", logo: "/images/logos/investors/antler.png" },
+  { column: "table3", start: "15:00", end: "17:00", title: "Jung Chul", logo: "/images/logos/investors/exborder.png" },
+  { column: "table4", start: "11:00", end: "13:00", title: "Archibald", logo: "" },
+  { column: "table4", start: "13:00", end: "15:00", title: "Rancho Lee", logo: "/images/logos/investors/simsan.png" },
+  { column: "table4", start: "15:00", end: "16:00", title: "Masato Ushio", logo: "/images/logos/investors/delightventures.png" },
+  { column: "table4", start: "16:00", end: "17:00", title: "Kazuki Iwasaki", logo: "/images/logos/investors/atrae.svg" },
+  { column: "table5", start: "13:00", end: "15:00", title: "Futaba Ishikawa", logo: "/images/logos/investors/incubate.png" },
+  { column: "table5", start: "16:00", end: "17:00", title: "Satoshi Obata", logo: "/images/logos/investors/united.png" },
+  { column: "table6", start: "13:00", end: "15:00", title: "Yoshitake Sohma", logo: "" },
+  { column: "table7", start: "9:00", end: "11:00", title: "Ben Spitz", logo: "/images/logos/investors/orrick.png" },
+  { column: "table7", start: "14:00", end: "16:00", title: "Ben Spitz", logo: "/images/logos/investors/orrick.png" },
+];
+
+const stageSessions = [
+  { column: "stage", start: "10:00", end: "11:30", title: "Pitch Contest Round 1" },
+  { column: "stage", start: "11:30", end: "13:00", title: "Pitch Contest Round 2" },
+  { column: "stage", start: "13:00", end: "13:30", title: "ReSpark" },
+  { column: "stage", start: "13:30", end: "14:00", title: "Deel" },
+  { column: "stage", start: "14:00", end: "14:30", title: "Panel Discussions" },
+  { column: "stage", start: "14:30", end: "15:30", title: "VC Pitch" },
+  { column: "stage", start: "15:30", end: "17:00", title: "Panel Discussions" },
+  { column: "stage", start: "17:00", end: "18:00", title: "Pitch Final" },
+];
+
 const sessions = [
-  { hall: "meeting", start: "10:00", end: "17:00", title: "Investor Office Hours" },
-  { hall: "stage", start: "10:00", end: "11:30", title: "Pitch Contest Round 1" },
-  { hall: "stage", start: "11:30", end: "13:00", title: "Pitch Contest Round 2" },
-  { hall: "stage", start: "13:00", end: "13:30", title: "ReSpark" },
-  { hall: "stage", start: "13:30", end: "14:00", title: "Deel" },
-  { hall: "stage", start: "14:00", end: "17:00", title: "Panel Discussions" },
-  { hall: "stage", start: "17:00", end: "18:00", title: "Pitch Final" },
-  { hall: "both", start: "18:00", end: "21:00", title: "After Party" },
+  ...stageSessions,
+  ...meetingSessions,
+  { column: "__all__", start: "18:00", end: "21:00", title: "After Party" },
 ];
-
-// --- Layout logic below is generic; it never needs editing when the
-// data above changes. -------------------------------------------------
-
-const HALL_KEYS = ["meeting", "stage"];
-const HALLS = [
-  { key: "meeting", label: "Meeting area" },
-  { key: "stage", label: "Stage" },
-];
-const ROW_HEIGHT = 88; // px — every labeled Y-axis row renders at this same height (tall enough for a title + time range)
-const STANDARD_ROW_MINUTES = 60; // the "normal" hour-long slot duration, used to size unlabeled gaps at the same rate as a regular row
-
-const toMinutes = (hhmm) => {
-  const [h, m] = hhmm.split(":").map(Number);
-  return h * 60 + m;
-};
-
-const timeRowSpans = timeRows.map((r) => ({
-  start: toMinutes(r.start),
-  end: toMinutes(r.end),
-}));
-
-const breakpointSet = new Set();
-timeRows.forEach((r) => {
-  breakpointSet.add(toMinutes(r.start));
-  breakpointSet.add(toMinutes(r.end));
-});
-sessions.forEach((s) => {
-  breakpointSet.add(toMinutes(s.start));
-  breakpointSet.add(toMinutes(s.end));
-});
-const breakpoints = [...breakpointSet].sort((a, b) => a - b);
-
-// Grid line for a given minute value; line 1 is the header row's top.
-const lineForMinutes = (mins) => breakpoints.indexOf(mins) + 2;
-
-// Every labeled Y-axis row gets the same height (ROW_HEIGHT). A sub-row
-// created by a session boundary that falls mid-row (e.g. 11:30) gets a
-// proportional slice of its parent row's height. A sub-row that falls in
-// a gap between labeled rows (e.g. the 12:00-13:00 lunch break) isn't part
-// of the Y axis and gets no label, but still needs a real, consistent
-// per-minute rate — otherwise two sessions of equal duration render at
-// different heights depending on whether they cross an unlabeled gap.
-const pxPerMinute = ROW_HEIGHT / STANDARD_ROW_MINUTES;
-const subRows = breakpoints.slice(0, -1).map((start, i) => {
-  const end = breakpoints[i + 1];
-  const duration = end - start;
-  const parentRow = timeRowSpans.find((r) => start >= r.start && end <= r.end);
-  const height = parentRow
-    ? ROW_HEIGHT * (duration / (parentRow.end - parentRow.start))
-    : pxPerMinute * duration;
-  return { start, end, height };
-});
-
-const labelByStart = new Map(
-  timeRows.map((r) => [toMinutes(r.start), `${r.start} – ${r.end}`])
-);
-
-const gridTemplateRows =
-  "auto " + subRows.map((r) => `${r.height}px`).join(" ");
-
-const sessionCells = sessions.map((s) => ({
-  ...s,
-  rowStart: lineForMinutes(toMinutes(s.start)),
-  rowEnd: lineForMinutes(toMinutes(s.end)),
-}));
-
-// Which sub-rows are already covered by a session, per hall — used to
-// render truly blank filler cells for every remaining empty slot.
-const coveredByHall = { meeting: new Set(), stage: new Set() };
-sessionCells.forEach((s) => {
-  const halls = s.hall === "both" ? HALL_KEYS : [s.hall];
-  for (let line = s.rowStart; line < s.rowEnd; line++) {
-    halls.forEach((h) => coveredByHall[h].add(line - 2));
-  }
-});
-
-const emptyCells = [];
-HALL_KEYS.forEach((hall) => {
-  subRows.forEach((_, i) => {
-    if (!coveredByHall[hall].has(i)) emptyCells.push({ hall, rowLine: i + 2 });
-  });
-});
 ---
 
 <section class="section" id="timetable">
   <div class="container">
     <h2 class="section-title">Timetable</h2>
 
-    <div class="timetable-scroll">
-      <div class="timetable-grid" style={`grid-template-rows: ${gridTemplateRows};`}>
-        <div class="tt-corner"></div>
-
-        {HALLS.map((hall) => (
-          <div class={`tt-hall-header tt-hall-header--${hall.key}`}>{hall.label}</div>
-        ))}
-
-        {subRows.map((row, i) => {
-          const label = labelByStart.get(row.start);
-          return label ? (
-            <div class="tt-time-label" style={`grid-row: ${i + 2};`}>{label}</div>
-          ) : (
-            <div class="tt-time-blank" style={`grid-row: ${i + 2};`}></div>
-          );
-        })}
-
-        {emptyCells.map((c) => (
-          <div class={`tt-cell-empty tt-cell-empty--${c.hall}`} style={`grid-row: ${c.rowLine};`}></div>
-        ))}
-
-        {sessionCells.map((s) => (
-          <div
-            class={`tt-session tt-session--${s.hall}`}
-            style={`grid-row: ${s.rowStart} / ${s.rowEnd};`}
-          >
-            <span class="tt-session-title">{s.title}</span>
-            <span class="tt-session-time">{s.start} – {s.end}</span>
-          </div>
-        ))}
-      </div>
-    </div>
+    <TimetableGrid
+      columns={timetableColumns}
+      timeRows={timeRows}
+      sessions={sessions}
+      showLogos
+    />
   </div>
 </section>
