@@ -460,10 +460,14 @@ button {
   border-radius: var(--radius);
 }
 
+.timetable-scroll + .who-label {
+  margin-top: 2.5rem;
+}
+
 .timetable-grid {
   display: grid;
-  grid-template-columns: 120px 1fr 1fr;
-  min-width: 600px;
+  --tt-time-col: 120px;
+  --tt-col-min: 150px;
 }
 
 .tt-corner {
@@ -472,33 +476,17 @@ button {
   background: var(--bg);
 }
 
-.tt-hall-header {
-  grid-row: 1;
+.tt-col-header {
   background: var(--bg-card);
-  color: var(--text);
+  color: var(--accent);
+  font-size: 0.9rem;
   font-weight: 700;
-  font-size: 0.85rem;
   text-align: center;
   padding: 0.6rem 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.tt-hall-header--meeting,
-.tt-session--meeting,
-.tt-cell-empty--meeting {
-  grid-column: 2;
-}
-
-.tt-hall-header--stage,
-.tt-session--stage,
-.tt-cell-empty--stage {
-  grid-column: 3;
-}
-
-.tt-session--both {
-  grid-column: 2 / 4;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: none;
+  border-right: 1px solid var(--border);
 }
 
 .tt-time-label,
@@ -528,12 +516,12 @@ button {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   margin: 3px 4px;
-  padding: 0.5rem 0.7rem;
+  padding: 0.55rem 0.75rem;
   color: var(--text);
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 0.2rem;
+  justify-content: flex-start;
+  gap: 0.25rem;
   overflow: hidden;
   transition: border-color 0.2s, background 0.2s;
 }
@@ -555,18 +543,77 @@ button {
   color: var(--text-muted);
 }
 
-.tt-session--both {
+.tt-session--all {
   align-items: center;
   text-align: center;
+  justify-content: center;
+}
+
+.tt-session--logo {
+  flex-direction: column;
+  justify-content: start;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+}
+
+.tt-session-logo {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  height: 88px;
+  padding: 16px;
+  border: 1px solid var(--border, #2a2a35);
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.tt-session-logo img {
+  max-width: 100%;
+  max-height: 56px;
+  object-fit: contain;
+}
+
+.tt-session-logo-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--bg);
+  background: var(--accent);
+}
+
+.tt-session-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.tt-session--logo .tt-session-title {
+  font-size: 0.72rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tt-session--logo .tt-session-time {
+  font-size: 0.62rem;
 }
 
 @media (max-width: 700px) {
   .timetable-grid {
-    grid-template-columns: 88px 1fr 1fr;
-    min-width: 460px;
+    --tt-time-col: 88px;
+    --tt-col-min: 110px;
   }
 
-  .tt-hall-header {
+  .tt-col-header {
     font-size: 0.75rem;
     padding: 0.5rem 0.25rem;
   }
@@ -585,6 +632,11 @@ button {
 
   .tt-session-time {
     font-size: 0.6rem;
+  }
+
+  .tt-session-logo {
+    width: 22px;
+    height: 22px;
   }
 }
 

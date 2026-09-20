@@ -1,0 +1,238 @@
+---
+export interface TimetableColumn {
+  key: string;
+  label: string;
+  group?: string;
+}
+
+export interface TimetableRow {
+  start: string;
+  end: string;
+}
+
+export interface TimetableSession {
+  column: string; // must match a TimetableColumn.key, or "__all__" to span every column
+  start: string;
+  end: string;
+  title: string;
+  logo?: string; // path to a company logo image; falls back to an initial badge when omitted
+}
+
+interface Props {
+  columns: TimetableColumn[];
+  timeRows: TimetableRow[];
+  sessions: TimetableSession[];
+  minCardHeight?: number;
+  rowHeight?: number;
+  standardRowMinutes?: number;
+  showLogos?: boolean;
+}
+
+const {
+  columns,
+  timeRows,
+  sessions,
+  minCardHeight,
+  rowHeight,
+  standardRowMinutes,
+  showLogos = false,
+} = Astro.props;
+
+const ALL = "__all__";
+const columnKeys = columns.map((c) => c.key);
+const showHeader = columns.length > 1;
+const hasGroups = columns.some((c) => Boolean(c.group));
+const headerOffset = hasGroups ? 3 : (showHeader ? 2 : 1);
+
+const groupRanges = [];
+if (hasGroups) {
+  let currentGroup = null;
+  let startCol = 2;
+  columns.forEach((col, i) => {
+    const colLine = i + 2;
+    if (col.group !== currentGroup) {
+      if (currentGroup) {
+        groupRanges.push({ group: currentGroup, startCol, endCol: colLine });
+      }
+      currentGroup = col.group;
+      startCol = colLine;
+    }
+  });
+  if (currentGroup) {
+    groupRanges.push({ group: currentGroup, startCol, endCol: columns.length + 2 });
+  }
+}
+
+const toMinutes = (hhmm) => {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+};
+
+const timeRowSpans = timeRows.map((r) => ({
+  start: toMinutes(r.start),
+  end: toMinutes(r.end),
+}));
+
+const breakpointSet = new Set();
+timeRows.forEach((r) => {
+  breakpointSet.add(toMinutes(r.start));
+  breakpointSet.add(toMinutes(r.end));
+});
+sessions.forEach((s) => {
+  breakpointSet.add(toMinutes(s.start));
+  breakpointSet.add(toMinutes(s.end));
+});
+const breakpoints = [...breakpointSet].sort((a, b) => a - b);
+
+// Grid line for a given minute value; line 1 is the header row's top
+// (or the first time row's top, when there's no header row).
+const lineForMinutes = (mins) => breakpoints.indexOf(mins) + headerOffset;
+
+// The smallest timetable card dictates the distance between Y axis time slots:
+// 1. Find the shortest session duration (e.g. 30 min)
+const sessionDurations = sessions
+  .map((s) => toMinutes(s.end) - toMinutes(s.start))
+  .filter((d) => d > 0);
+const minDuration = sessionDurations.length > 0 ? Math.min(...sessionDurations) : 30;
+
+// 2. Determine the height needed for that smallest card:
+//    - The smallest card is 30 min (Stage), where ~72px provides comfortable breathing room.
+//    - Proportional 60 min slots (Meeting Area with 88px logos) will then be 144px, fitting logos cleanly.
+const defaultMinCardHeight = 72;
+const smallestCardHeight =
+  minCardHeight ??
+  (rowHeight && standardRowMinutes ? (rowHeight / standardRowMinutes) * minDuration : rowHeight) ??
+  defaultMinCardHeight;
+
+// All-column spanning sessions (like After Party) shouldn't be stretched out to multi-hour heights;
+// their height should match the distance of a standard Y-axis time slot / smallest card.
+const allSessionSpans = sessions
+  .filter((s) => s.column === ALL)
+  .map((s) => ({ start: toMinutes(s.start), end: toMinutes(s.end) }));
+const isAllSession = (start, end) =>
+  allSessionSpans.some((span) => start >= span.start && end <= span.end);
+
+// 3. The Y-axis distance scale is dictated by the smallest card:
+const pxPerMinute = smallestCardHeight / minDuration;
+const baseSlotHeight = 72;
+const subRows = breakpoints.slice(0, -1).map((start, i) => {
+  const end = breakpoints[i + 1];
+  const duration = end - start;
+  const height = isAllSession(start, end)
+    ? baseSlotHeight
+    : Math.round(duration * pxPerMinute);
+  return { start, end, height };
+});
+
+
+const headerRows = hasGroups ? "auto auto " : (showHeader ? "auto " : "");
+const gridTemplateRows =
+  headerRows + subRows.map((r) => `${r.height}px`).join(" ");
+const gridTemplateColumns = `var(--tt-time-col) repeat(${columns.length}, minmax(var(--tt-col-min), 1fr))`;
+
+// Column 1 is always the time-label column; real columns start at line 2.
+const columnLine = new Map(columns.map((c, i) => [c.key, i + 2]));
+const lastColumnLine = columns.length + 2; // one past the last real column's line
+
+const sessionCells = sessions.map((s) => ({
+  ...s,
+  rowStart: lineForMinutes(toMinutes(s.start)),
+  rowEnd: lineForMinutes(toMinutes(s.end)),
+  gridColumn: s.column === ALL ? `2 / ${lastColumnLine}` : `${columnLine.get(s.column)}`,
+}));
+
+// Which sub-rows are already covered by a session, per column — used to
+// render truly blank filler cells for every remaining empty slot.
+const coveredByColumn = Object.fromEntries(columnKeys.map((k) => [k, new Set()]));
+sessionCells.forEach((s) => {
+  const cols = s.column === ALL ? columnKeys : [s.column];
+  for (let line = s.rowStart; line < s.rowEnd; line++) {
+    cols.forEach((k) => coveredByColumn[k]?.add(line - headerOffset));
+  }
+});
+
+const emptyCells = [];
+columnKeys.forEach((key) => {
+  subRows.forEach((_, i) => {
+    if (!coveredByColumn[key].has(i)) emptyCells.push({ column: key, rowLine: i + headerOffset });
+  });
+});
+---
+
+<div class="timetable-scroll">
+  <div
+    class="timetable-grid"
+    style={`grid-template-columns: ${gridTemplateColumns}; grid-template-rows: ${gridTemplateRows};`}
+  >
+    {hasGroups && <div class="tt-corner" style="grid-row: 1 / 3; grid-column: 1;"></div>}
+    {!hasGroups && showHeader && <div class="tt-corner"></div>}
+
+    {hasGroups &&
+      groupRanges.map((g) => {
+        const isSingleCol = g.endCol - g.startCol === 1;
+        return (
+          <div
+            class={`tt-group-header${g.group.toLowerCase().includes("stage") ? " tt-group-header--stage" : ""}`}
+            style={`grid-row: ${isSingleCol ? "1 / 3" : "1"}; grid-column: ${g.startCol} / ${g.endCol};`}
+          >
+            {g.group}
+          </div>
+        );
+      })}
+
+    {showHeader &&
+      columns.map((col) => {
+        const isSingleColGroup = hasGroups && col.group && groupRanges.some((g) => g.group === col.group && g.endCol - g.startCol === 1);
+        if (isSingleColGroup) return null;
+        return (
+          <div
+            class="tt-col-header"
+            style={`grid-row: ${hasGroups ? 2 : 1}; grid-column: ${columnLine.get(col.key)};`}
+          >
+            {col.label}
+          </div>
+        );
+      })}
+
+    {timeRows.map((r) => {
+      const startLine = lineForMinutes(toMinutes(r.start));
+      const endLine = lineForMinutes(toMinutes(r.end));
+      return (
+        <div class="tt-time-label" style={`grid-row: ${startLine} / ${endLine};`}>
+          {r.start} – {r.end}
+        </div>
+      );
+    })}
+
+    {emptyCells.map((c) => (
+      <div
+        class="tt-cell-empty"
+        style={`grid-row: ${c.rowLine}; grid-column: ${columnLine.get(c.column)};`}
+      ></div>
+    ))}
+
+    {sessionCells.map((s) => {
+      const withLogo = showLogos && s.column !== ALL && s.column !== "stage";
+      return (
+        <div
+          class={`tt-session${s.column === ALL ? " tt-session--all" : ""}${withLogo ? " tt-session--logo" : ""}`}
+          style={`grid-row: ${s.rowStart} / ${s.rowEnd}; grid-column: ${s.gridColumn};`}
+        >
+          {withLogo && (
+            <span class="tt-session-logo">
+              {s.logo ? (
+                <img src={s.logo} alt={s.title} />
+              ) : (
+                <span class="tt-session-logo-fallback">{s.title.charAt(0).toUpperCase()}</span>
+              )}
+            </span>
+          )}
+          <span class="tt-session-text">
+            <span class="tt-session-title">{s.title}</span>
+            <span class="tt-session-time">{s.start} – {s.end}</span>
+          </span>
+        </div>
+      );
+    })}
+  </div>
+</div>
