@@ -1,56 +1,64 @@
 ---
-const startups = [
-  { name: "Startup Now", src: "/images/logos/startups/startupnow.png" },
-  { name: "Refcome", src: "/images/logos/startups/refcome.png" },
-  { name: "Adora", src: "/images/logos/startups/adora.png" },
-  { name: "Atlas", src: "/images/logos/startups/atlas.png" },
-  { name: "Chart", src: "/images/logos/startups/chart.png" },  
-  { name: "Commonspace", src: "/images/logos/startups/commonspace.png" },  
-  { name: "Datailo", src: "/images/logos/startups/datailo.png" },
-  { name: "LOOQ", src: "/images/logos/startups/looq.png" },
-  { name: "Ivory", src: "/images/logos/startups/ivory.png" },
-  { name: "Locale Partner", src: "/images/logos/startups/localepartner.png" },
-  { name: "Minacolor", src: "/images/logos/startups/minacolor.png" },
-  { name: "Neighbor", src: "/images/logos/startups/neighbor.png" },
-  { name: "NeuroPredict", src: "/images/logos/startups/neuropredict.png" },
-  { name: "Oni", src: "/images/logos/startups/oni.png" },
-  { name: "Optimimum", src: "/images/logos/startups/optimium.png" },
-  { name: "Ranked", src: "/images/logos/startups/ranked.png" },
-  { name: "Respark", src: "/images/logos/startups/respark.png" },
-  { name: "Shinmirai", src: "/images/logos/startups/shinmirai.svg" },
-  { name: "TECETEME", src: "/images/logos/startups/tecteme.png" },
-  { name: "Ten K Studios", src: "/images/logos/startups/tenk.png" }, 
-  { name: "Suparanku", src: "/images/logos/startups/suparanku.png" },
-  { name: "Zakuro AI", src: "/images/logos/startups/zakuro.png" },
-  { name: "Yorimichi", src: "/images/logos/startups/yorimichi.svg" },
+interface Company {
+  name: string;
+  fullName: string;
+  url: string;
+  src: string;
+}
+
+const startups: Company[] = [
+  { name: "Startup Now", fullName: "JobTales株式会社 (JobTales Inc.)", url: "https://jobtales.co.jp/", src: "/images/logos/startups/startupnow.png" },
+  { name: "Refcome", fullName: "株式会社リフカム (Refcome, Inc.)", url: "https://refcome.com/", src: "/images/logos/startups/refcome.png" },
+  { name: "Adora", fullName: "Adora株式会社 (Adora Inc.)", url: "https://www.kodomamo.com/", src: "/images/logos/startups/adora.png" },
+  { name: "Atlas", fullName: "Atlas Technologies AS (Atlas.co)", url: "https://atlas.co/", src: "/images/logos/startups/atlas.png" },
+  { name: "Chart Space", fullName: "Chart株式会社 (Chart Inc.)", url: "https://chart-inc.com/", src: "/images/logos/startups/chart.png" },  
+  { name: "Commonspace", fullName: "commonspace合同会社 (Commonspace)", url: "https://common.space/", src: "/images/logos/startups/commonspace.png" },  
+  { name: "Datailo", fullName: "株式会社Datailo (Datailo Inc.)", url: "https://datailo.jp/", src: "/images/logos/startups/datailo.png" },
+  { name: "LOOQ", fullName: "LOOQ", url: "https://looq.icu/", src: "/images/logos/startups/looq.png" },
+  { name: "Ivory", fullName: "IVORY TECHNOLOGIES LTD", url: "https://ivorytech.io/", src: "/images/logos/startups/ivory.png" },
+  { name: "Locale Partner", fullName: "Locale Partner", url: "https://localepartner.com/", src: "/images/logos/startups/localepartner.png" },
+  { name: "Minacolor", fullName: "株式会社ミナカラ (Minacolor Inc.)", url: "https://minacolor.com/", src: "/images/logos/startups/minacolor.png" },
+  { name: "Neighbor", fullName: "株式会社NEIGHBOR (NEIGHBOR Inc.)", url: "https://neighbor.gg/", src: "/images/logos/startups/neighbor.png" },
+  { name: "NeuroPredict", fullName: "Neuropredict", url: "https://neuropredict.eu/", src: "/images/logos/startups/neuropredict.png" },
+  { name: "Oni", fullName: "株式会社ライスプラットフォーマー / ONI & Co.", url: "https://oni-co.jp/", src: "/images/logos/startups/oni.png" },
+  { name: "Optimium", fullName: "株式会社Optimium (Optimium, Inc.)", url: "https://optimium.io/", src: "/images/logos/startups/optimium.png" },
+  { name: "Ranked", fullName: "Ranked", url: "https://ranked.jp/", src: "/images/logos/startups/ranked.png" },
+  { name: "Respark", fullName: "株式会社SAINOMENT (SAINOMENT Inc.) / ReSpark", url: "https://respark-en.com/", src: "/images/logos/startups/respark.png" },
+  { name: "Shinmirai", fullName: "株式会社森未来 (Shinmirai Inc.)", url: "https://shin-mirai.co.jp/", src: "/images/logos/startups/shinmirai.svg" },
+  { name: "TECTEME", fullName: "Mosaic Architecture / TECTEME", url: "https://tecteme.org/", src: "/images/logos/startups/tecteme.png" },
+  { name: "Ten K Studios", fullName: "Ten K Studios (ten-k studios)", url: "https://tenkstudios.com/", src: "/images/logos/startups/tenk.png" }, 
+  { name: "Suparanku", fullName: "株式会社アプリ調味 (App Tyomi Inc.) / Suparanku", url: "https://suparanku.com/", src: "/images/logos/startups/suparanku.png" },
+  { name: "Zakuro AI", fullName: "Zakuro AI", url: "https://zakuro-ai.com/", src: "/images/logos/startups/zakuro.png" },
+  { name: "Yorimichi", fullName: "株式会社Yorimichi (Yorimichi Inc.)", url: "https://yori-michi.co.jp/", src: "/images/logos/startups/yorimichi.svg" },
 ];
-const investors = [
-  { name: "Akai Wagon Parnters", src: "/images/logos/investors/akaiwagon.png" },
-  { name: "Alpha VC", src: "/images/logos/investors/alpha.png" },
-  { name: "Antler", src: "/images/logos/investors/antler.png" },
-  { name: "Archetype", src: "/images/logos/investors/archetype.png" },
-  { name: "Apollo Capital", src: "/images/logos/investors/apollo.png" },
-  { name: "Atrae", src: "/images/logos/investors/atrae.svg" },
-  { name: "CyberAgent", src: "/images/logos/investors/cyberagent.png" },
-  { name: "DeNA", src: "/images/logos/investors/dena.png" },
-  { name: "Delight Ventures", src: "/images/logos/investors/delightventures.png" },
-  { name: "DG", src: "/images/logos/investors/dg.png" },
-  { name: "Exborder", src: "/images/logos/investors/exborder.png" },
-  { name: "Great Wave Ventures", src: "/images/logos/investors/greatwave.png" },
-  { name: "GHOVC", src: "/images/logos/investors/ghovc.png" },
-  { name: "Headline", src: "/images/logos/investors/headline.png" },
-  { name: "Incubate Fund", src: "/images/logos/investors/incubate.png" },
-  { name: "Inovexus", src: "/images/logos/investors/inovexus.png" },
-  { name: "Japan Angels", src: "/images/logos/investors/japanangels.png" },
-  { name: "Niu Ventures", src: "/images/logos/investors/niuventures.png" },
-  { name: "OASIS", src: "/images/logos/investors/oasis.png" },
-  { name: "Orrick", src: "/images/logos/investors/orrick.png" },
-  { name: "Partners Fund", src: "/images/logos/investors/partnersfund.png" },
-  { name: "Shiza Ventures", src: "/images/logos/investors/shizaventures.png" },
-  { name: "Simsan Ventures", src: "/images/logos/investors/simsan.png" },
-  { name: "Spiral Capital", src: "/images/logos/investors/spiralcapital.png" },
-  { name: "Techstars", src: "/images/logos/investors/techstars.png" }, 
-  { name: "United", src: "/images/logos/investors/united.png" },
+
+const investors: Company[] = [
+  { name: "Akai Wagon Partners", fullName: "Akai Wagon Partners", url: "https://akaiwagon.com/", src: "/images/logos/investors/akaiwagon.png" },
+  { name: "Alpha VC", fullName: "株式会社ALPHA (ALPHA / ALPHA VC)", url: "https://alphavc.jp/", src: "/images/logos/investors/alpha.png" },
+  { name: "Antler", fullName: "Antler (Antler Japan)", url: "https://www.antler.co/", src: "/images/logos/investors/antler.png" },
+  { name: "Archetype Ventures", fullName: "アーキタイプベンチャーズ株式会社 (Archetype Ventures)", url: "https://archetype.vc/", src: "/images/logos/investors/archetype.png" },
+  { name: "Apollo Capital", fullName: "株式会社アポロ・キャピタル (Apollo Capital Inc.)", url: "https://apollocap.co.jp/", src: "/images/logos/investors/apollo.png" },
+  { name: "Atrae", fullName: "株式会社アトラエ (Atrae, Inc.)", url: "https://atrae.co.jp/", src: "/images/logos/investors/atrae.svg" },
+  { name: "CyberAgent Capital", fullName: "株式会社サイバーエージェント・キャピタル (CyberAgent Capital, Inc.)", url: "https://cyberagentcapital.com/", src: "/images/logos/investors/cyberagent.png" },
+  { name: "DeNA", fullName: "株式会社ディー・エヌ・エー (DeNA Co., Ltd.)", url: "https://dena.com/", src: "/images/logos/investors/dena.png" },
+  { name: "Delight Ventures", fullName: "株式会社デライト・ベンチャーズ (Delight Ventures)", url: "https://www.delight-ventures.com/", src: "/images/logos/investors/delightventures.png" },
+  { name: "Digital Garage", fullName: "株式会社デジタルガレージ (Digital Garage, Inc.)", url: "https://www.garage.co.jp/", src: "/images/logos/investors/dg.png" },
+  { name: "ExBorder Partners", fullName: "ExBorder Partners LLC", url: "https://exborder.partners/", src: "/images/logos/investors/exborder.png" },
+  { name: "Great Wave Ventures", fullName: "Great Wave Ventures", url: "https://www.greatwave.vc/", src: "/images/logos/investors/greatwave.png" },
+  { name: "GHOVC", fullName: "Global Hands-On VC (GHOVC)", url: "https://www.ghovc.com/", src: "/images/logos/investors/ghovc.png" },
+  { name: "Headline", fullName: "Headline Asia / Headline VC", url: "https://headline.com/", src: "/images/logos/investors/headline.png" },
+  { name: "Incubate Fund", fullName: "インキュベイトファンド株式会社 (Incubate Fund)", url: "https://incubatefund.com/", src: "/images/logos/investors/incubate.png" },
+  { name: "Inovexus", fullName: "Inovexus", url: "https://inovexus.com/", src: "/images/logos/investors/inovexus.png" },
+  { name: "Japan Angels", fullName: "Japan Angels", url: "https://japanangels.org/", src: "/images/logos/investors/japanangels.png" },
+  { name: "Niu Ventures", fullName: "Niu Ventures", url: "https://www.niu.ventures/", src: "/images/logos/investors/niuventures.png" },
+  { name: "OASIS FUND", fullName: "合同会社OASIS (OASIS FUND)", url: "https://oasisfund.jp/", src: "/images/logos/investors/oasis.png" },
+  { name: "Orrick", fullName: "Orrick, Herrington & Sutcliffe LLP", url: "https://www.orrick.com/", src: "/images/logos/investors/orrick.png" },
+  { name: "Partners Fund", fullName: "株式会社PARTNERS FUND (PARTNERS FUND)", url: "https://partnersfund.vc/", src: "/images/logos/investors/partnersfund.png" },
+  { name: "Shiza Ventures", fullName: "株式会社Shiza Ventures (Shiza Ventures)", url: "https://shiza.vc/", src: "/images/logos/investors/shizaventures.png" },
+  { name: "Simsan Ventures", fullName: "Simsan Ventures Limited", url: "https://simsan.vc/", src: "/images/logos/investors/simsan.png" },
+  { name: "Spiral Capital", fullName: "Spiral Capital株式会社 (Spiral Capital Inc.)", url: "https://spiral-cap.com/", src: "/images/logos/investors/spiralcapital.png" },
+  { name: "Techstars Tokyo", fullName: "Techstars Tokyo", url: "https://www.techstars.com/accelerators/tokyo", src: "/images/logos/investors/techstars.png" }, 
+  { name: "UNITED", fullName: "ユナイテッド株式会社 (UNITED, Inc.)", url: "https://united.jp/", src: "/images/logos/investors/united.png" },
 ];
 ---
 
@@ -61,18 +69,32 @@ const investors = [
     <h3 class="who-label">Startups</h3>
     <div class="who-grid">
       {startups.map((c) => (
-        <div class="who-tile">
-          <img src={c.src} alt={c.name} />
-        </div>
+        <a
+          class="who-tile"
+          href={c.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={c.fullName}
+          aria-label={c.fullName}
+        >
+          <img src={c.src} alt={c.fullName} />
+        </a>
       ))}
     </div>
 
     <h3 class="who-label">Investors</h3>
     <div class="who-grid">
       {investors.map((c) => (
-        <div class="who-tile">
-          <img src={c.src} alt={c.name} />
-        </div>
+        <a
+          class="who-tile"
+          href={c.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={c.fullName}
+          aria-label={c.fullName}
+        >
+          <img src={c.src} alt={c.fullName} />
+        </a>
       ))}
     </div>
   </div>
