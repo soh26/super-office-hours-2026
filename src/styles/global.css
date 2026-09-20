@@ -303,6 +303,14 @@ button {
   border: 1px solid var(--border, #2a2a35);
   border-radius: 12px;
   background: #fff;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.who-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(45, 212, 191, 0.25);
+  border-color: var(--accent);
 }
 
 .who-tile img {
@@ -442,6 +450,142 @@ button {
   content: "✓";
   color: var(--accent);
   font-weight: 700;
+}
+
+/* Timetable */
+.timetable-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.timetable-grid {
+  display: grid;
+  grid-template-columns: 120px 1fr 1fr;
+  min-width: 600px;
+}
+
+.tt-corner {
+  grid-row: 1;
+  grid-column: 1;
+  background: var(--bg);
+}
+
+.tt-hall-header {
+  grid-row: 1;
+  background: var(--bg-card);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 0.6rem 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tt-hall-header--meeting,
+.tt-session--meeting,
+.tt-cell-empty--meeting {
+  grid-column: 2;
+}
+
+.tt-hall-header--stage,
+.tt-session--stage,
+.tt-cell-empty--stage {
+  grid-column: 3;
+}
+
+.tt-session--both {
+  grid-column: 2 / 4;
+}
+
+.tt-time-label,
+.tt-time-blank {
+  grid-column: 1;
+  background: var(--bg);
+}
+
+.tt-time-label {
+  padding: 0.2rem 0.6rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-align: right;
+  white-space: nowrap;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
+.tt-cell-empty {
+  background: var(--bg);
+}
+
+.tt-session {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin: 3px 4px;
+  padding: 0.5rem 0.7rem;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.2rem;
+  overflow: hidden;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.tt-session:hover {
+  border-color: rgba(45, 212, 191, 0.3);
+  background: var(--bg-card-hover);
+}
+
+.tt-session-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.tt-session-time {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.tt-session--both {
+  align-items: center;
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  .timetable-grid {
+    grid-template-columns: 88px 1fr 1fr;
+    min-width: 460px;
+  }
+
+  .tt-hall-header {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.25rem;
+  }
+
+  .tt-time-label {
+    font-size: 0.75rem;
+  }
+
+  .tt-session {
+    padding: 0.4rem 0.5rem;
+  }
+
+  .tt-session-title {
+    font-size: 0.7rem;
+  }
+
+  .tt-session-time {
+    font-size: 0.6rem;
+  }
 }
 
 /* Footer */
