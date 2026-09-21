@@ -5,6 +5,7 @@ const PRICES = {
   startup: { amount: 3000, name: "Startup ticket" },
   investor: { amount: 6000, name: "Investor ticket" },
   lpDinner: { amount: 25000, name: "LP Dinner (Sep 24)" },
+  partner: { amount: 440000, name: "Special Partner" },
 };
 
 export async function onRequestOptions() {
