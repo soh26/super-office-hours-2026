@@ -7,8 +7,8 @@ import Layout from "../../layouts/Layout.astro";
     <!-- Top Navigation -->
     <header class="admin-header">
       <div class="admin-header-inner">
-        <a href="/" class="admin-logo">
-          TAKEOFF <span>tokyo</span>
+        <a href="/" class="admin-logo" aria-label="Takeoff Tokyo — home">
+          <img src="/images/takeoff-tokyo-logo.png" alt="Takeoff Tokyo" height="26" style="height:26px;width:auto;" />
           <span class="admin-tag">Admin</span>
         </a>
         <div id="authActions" style="display:none;">
@@ -47,6 +47,15 @@ import Layout from "../../layouts/Layout.astro";
     <!-- 2. Admin Dashboard (Revealed after successful password verification) -->
     <main id="dashboardView" class="dashboard-container" style="display:none;">
       <div class="dashboard-head">
+        <p class="hero-badge" style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.35rem 0.9rem;border-radius:9999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);font-size:0.85rem;color:rgba(255,255,255,0.6);margin-bottom:1rem;">
+          By
+          <img
+            src="/images/takeoff-tokyo-logo.png"
+            alt="Takeoff Tokyo"
+            style="height:14px;width:auto;display:inline-block;vertical-align:middle;"
+          />
+          · Sponsor Administration
+        </p>
         <div>
           <h1>Sponsor Links & Custom Checkouts</h1>
           <p class="text-muted">Create tailored checkout links and initiate Stripe payments for sponsors.</p>
@@ -293,8 +302,12 @@ import Layout from "../../layouts/Layout.astro";
     margin-bottom: 2rem;
   }
   .dashboard-head h1 {
-    font-size: 2rem;
-    font-weight: 800;
+    font-family: "TT Lakes Neue Expanded", "Barlow Condensed", sans-serif;
+    font-weight: 900;
+    font-stretch: 125%;
+    font-size: clamp(1.8rem, 4vw, 2.4rem);
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
     color: #fff;
     margin-bottom: 0.35rem;
   }
@@ -717,6 +730,13 @@ import Layout from "../../layouts/Layout.astro";
     adminPasswordInput.value = "";
   }
 
+  function getApiUrl(path) {
+    if (window.location.hostname === "localhost" && window.location.port !== "8787") {
+      return `http://localhost:8787${path}`;
+    }
+    return path;
+  }
+
   logoutBtn.addEventListener("click", showLock);
 
   loginForm.addEventListener("submit", async (e) => {
@@ -725,7 +745,7 @@ import Layout from "../../layouts/Layout.astro";
     const password = adminPasswordInput.value.trim();
 
     try {
-      const res = await fetch("/api/admin/verify", {
+      const res = await fetch(getApiUrl("/api/admin/verify"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
@@ -739,7 +759,11 @@ import Layout from "../../layouts/Layout.astro";
       sessionStorage.setItem(STORAGE_KEY, password);
       showDashboard();
     } catch (err) {
-      authError.textContent = err.message || "Invalid password";
+      let msg = err.message || "Invalid password";
+      if (err.name === "TypeError" && window.location.hostname === "localhost" && window.location.port === "4321") {
+        msg = "Cannot connect to Cloudflare Functions on port 8787. Please run 'npm run dev:functions' in your terminal.";
+      }
+      authError.textContent = msg;
       authError.style.display = "block";
     }
   });
@@ -754,7 +778,7 @@ import Layout from "../../layouts/Layout.astro";
     `;
 
     try {
-      const res = await fetch("/api/admin/sponsors", {
+      const res = await fetch(getApiUrl("/api/admin/sponsors"), {
         headers: { Authorization: `Bearer ${password}` },
       });
 
@@ -835,7 +859,7 @@ import Layout from "../../layouts/Layout.astro";
     const description = sponsorDescInput.value.trim();
 
     try {
-      const res = await fetch("/api/admin/sponsors", {
+      const res = await fetch(getApiUrl("/api/admin/sponsors"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
