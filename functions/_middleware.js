@@ -46,10 +46,15 @@ async function renderSponsorPage(context, slug, url) {
   const isAlreadyPaid = sponsor.status === "paid" || isPaidParam;
   const safeName = escapeHtml(sponsor.name);
   const safeSlug = escapeHtml(sponsor.slug);
-  const safeDesc = escapeHtml(
-    sponsor.description || "Full executive event access, dedicated networking, logo visibility, and qualified invoice receipt."
-  );
+  const explicitPerks = Array.isArray(sponsor.metadata?.perks)
+    ? sponsor.metadata.perks.map((p) => String(p || "").trim()).filter(Boolean)
+    : (sponsor.description ? String(sponsor.description).split("\n").map((p) => p.trim()).filter(Boolean) : []);
+  const safeDesc = escapeHtml(sponsor.description || `${safeName} Sponsorship`);
   const formattedAmount = formatYen(sponsor.amount);
+
+  const perksHtml = explicitPerks.length > 0
+    ? `<ul>${explicitPerks.map((perk) => `<li>${escapeHtml(perk)}</li>`).join("")}</ul>`
+    : "";
 
   const html = `<!doctype html>
 <html lang="en">
@@ -685,13 +690,7 @@ async function renderSponsorPage(context, slug, url) {
                <div class="price">${formattedAmount}<span>JPY</span></div>
              </div>
 
-             <ul>
-               <li>Full executive access to Super Office Hours at Dragon Gate, Shibuya</li>
-               <li>VIP matchmaking and direct introductions to leading startups & investors</li>
-               <li>Brand logo visibility on official event materials and digital screens</li>
-               <li>${safeDesc}</li>
-               <li>Qualified Japanese tax invoice / receipt (適格請求書) issued upon completion</li>
-             </ul>
+             ${perksHtml}
 
              <form id="sponsorForm">
                <div class="form-section-title">Billing & Contact Information</div>
@@ -705,11 +704,6 @@ async function renderSponsorPage(context, slug, url) {
                    <label for="contactEmail">Confirmation & Billing Email *</label>
                    <input type="email" id="contactEmail" placeholder="billing@yourcompany.com" value="${escapeHtml(sponsor.contact_email || "")}" required />
                  </div>
-               </div>
-
-               <div class="field">
-                 <label for="notes">Special Requests / Invoice Name (Optional)</label>
-                 <input type="text" id="notes" placeholder="e.g. Specific entity name for receipt or invoice" />
                </div>
 
                <div id="errorAlert" class="alert alert-error" style="display:none;margin-top:1rem;"></div>
@@ -742,7 +736,6 @@ async function renderSponsorPage(context, slug, url) {
 
                const name = document.getElementById('contactName').value.trim();
                const email = document.getElementById('contactEmail').value.trim();
-               const notes = document.getElementById('notes').value.trim();
 
                try {
                  const res = await fetch('/api/create-sponsor-checkout', {
@@ -752,7 +745,6 @@ async function renderSponsorPage(context, slug, url) {
                      slug: '${safeSlug}',
                      name,
                      email,
-                     description: notes || '${safeDesc}',
                    }),
                  });
 

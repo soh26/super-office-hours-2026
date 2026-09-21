@@ -51,6 +51,9 @@ export async function onRequestPost(context) {
 
   const origin = new URL(context.request.url).origin;
   const description = body.description || sponsor.description || "Super Office Hours Partnership & Sponsorship";
+  const perks = Array.isArray(sponsor.metadata?.perks)
+    ? sponsor.metadata.perks
+    : (Array.isArray(body.perks) ? body.perks : []);
 
   const formParams = {
     mode: "payment",
@@ -69,6 +72,10 @@ export async function onRequestPost(context) {
     "line_items[0][price_data][unit_amount]": String(sponsor.amount),
     "line_items[0][price_data][product_data][name]": `${sponsor.name} — Super Office Hours Sponsorship`,
   };
+
+  if (perks.length > 0) {
+    formParams["metadata[perks]"] = JSON.stringify(perks);
+  }
 
   if (description) {
     formParams["line_items[0][price_data][product_data][description]"] = description;

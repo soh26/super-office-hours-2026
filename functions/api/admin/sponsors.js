@@ -59,8 +59,11 @@ export async function onRequestPost(context) {
   const name = String(body.name || "").trim();
   const rawSlug = String(body.slug || "").trim();
   const amount = Number(body.amount);
-  const description = String(body.description || "").trim();
-  const contactEmail = String(body.contactEmail || "").trim();
+  const perks = Array.isArray(body.perks)
+    ? body.perks.map((p) => String(p || "").trim()).filter(Boolean)
+    : (body.description ? String(body.description).split("\n").map(p => p.trim()).filter(Boolean) : []);
+  const description = perks.length > 0 ? perks.join("\n") : String(body.description || "").trim();
+  const contactEmail = String(body.contactEmail || "").trim() || null;
 
   if (!name) {
     return json({ error: "Sponsor name is required" }, 400);
@@ -95,6 +98,9 @@ export async function onRequestPost(context) {
     description,
     contactEmail,
     status: "pending",
+    metadata: {
+      perks,
+    },
   };
 
   const created = await createSponsor(context.env, sponsorData);

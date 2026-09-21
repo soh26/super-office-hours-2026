@@ -101,49 +101,40 @@ import Layout from "../../layouts/Layout.astro";
             <code id="urlPreview">https://soh.takeoff-tokyo.com/thanks-acme-innovations</code>
           </div>
 
-          <div class="grid-2" style="margin-top:1.25rem;">
-            <div class="form-group">
-              <label for="sponsorAmount">Sponsorship Amount (JPY) <span class="req">*</span></label>
-              <div class="input-prefix-wrapper">
-                <span class="input-prefix">¥</span>
-                <input
-                  type="number"
-                  id="sponsorAmount"
-                  class="input-field with-prefix"
-                  placeholder="300000"
-                  min="50"
-                  step="1"
-                  required
-                />
-              </div>
-              <div class="preset-pills">
-                <button type="button" class="pill" data-amount="100000">¥100K</button>
-                <button type="button" class="pill" data-amount="250000">¥250K</button>
-                <button type="button" class="pill" data-amount="500000">¥500K</button>
-                <button type="button" class="pill" data-amount="1000000">¥1M</button>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="contactEmail">Sponsor Billing / Contact Email</label>
+          <div class="form-group" style="margin-top:1.25rem;">
+            <label for="sponsorAmount">Sponsorship Amount (JPY) <span class="req">*</span></label>
+            <div class="input-prefix-wrapper">
+              <span class="input-prefix">¥</span>
               <input
-                type="email"
-                id="contactEmail"
-                class="input-field"
-                placeholder="partner@sponsor.com (optional)"
+                type="number"
+                id="sponsorAmount"
+                class="input-field with-prefix"
+                placeholder="300000"
+                min="50"
+                step="1"
+                required
               />
-              <span class="field-hint">Prefills email for checkout and sends receipt</span>
+            </div>
+            <div class="preset-pills">
+              <button type="button" class="pill" data-amount="100000">¥100K</button>
+              <button type="button" class="pill" data-amount="250000">¥250K</button>
+              <button type="button" class="pill" data-amount="500000">¥500K</button>
+              <button type="button" class="pill" data-amount="1000000">¥1M</button>
             </div>
           </div>
 
-          <div class="form-group" style="margin-top:1.25rem;">
-            <label for="sponsorDesc">Package / Invoice Description</label>
-            <input
-              type="text"
-              id="sponsorDesc"
-              class="input-field"
-              placeholder="e.g. Gold Partner Sponsor Package (includes 4 VIP passes & logo showcase)"
-            />
+          <!-- Package / Invoice Description (Explicit Entries Only) -->
+          <div class="form-group" style="margin-top:1.5rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
+              <label style="margin-bottom:0;">Package / Invoice Description (Explicit Inclusions)</label>
+              <button type="button" id="addPerkBtn" class="pill" style="color:#2dd4bf;border-color:rgba(45,212,191,0.4);font-weight:600;">+ Add Entry</button>
+            </div>
+            <span class="field-hint" style="margin-top:0;margin-bottom:0.75rem;">
+              Enter each addon/perk as an explicit entry. If no entries are added, no addons or bullet points will appear.
+            </span>
+            <div id="perksList" style="display:flex;flex-direction:column;gap:0.6rem;">
+              <!-- Input tags dynamically added here -->
+            </div>
           </div>
 
           <div id="formError" class="alert-error" style="display:none;margin-top:1rem;"></div>
@@ -656,14 +647,30 @@ import Layout from "../../layouts/Layout.astro";
   const sponsorNameInput = document.getElementById("sponsorName");
   const sponsorSlugInput = document.getElementById("sponsorSlug");
   const sponsorAmountInput = document.getElementById("sponsorAmount");
-  const contactEmailInput = document.getElementById("contactEmail");
-  const sponsorDescInput = document.getElementById("sponsorDesc");
+  const perksList = document.getElementById("perksList");
+  const addPerkBtn = document.getElementById("addPerkBtn");
   const urlPreview = document.getElementById("urlPreview");
   const createSponsorForm = document.getElementById("createSponsorForm");
   const submitBtn = document.getElementById("submitBtn");
   const submitSpinner = document.getElementById("submitSpinner");
   const submitText = document.getElementById("submitText");
   const formError = document.getElementById("formError");
+
+  function addPerkRow(initialValue = "") {
+    const row = document.createElement("div");
+    row.className = "perk-row";
+    row.style.cssText = "display:flex;gap:0.5rem;align-items:center;";
+    row.innerHTML = `
+      <input type="text" class="input-field perk-input" placeholder="e.g. 4 VIP Executive Passes" value="${escape(initialValue)}" />
+      <button type="button" class="btn btn-sm btn-ghost remove-perk-btn" title="Remove" style="padding:0.6rem 0.85rem;color:#f87171;border-color:rgba(239,68,68,0.25);font-size:1.1rem;line-height:1;">&times;</button>
+    `;
+    row.querySelector(".remove-perk-btn").addEventListener("click", () => {
+      row.remove();
+    });
+    perksList.appendChild(row);
+  }
+
+  addPerkBtn.addEventListener("click", () => addPerkRow());
 
   const createdAlert = document.getElementById("createdAlert");
   const createdUrlInput = document.getElementById("createdUrlInput");
@@ -855,8 +862,9 @@ import Layout from "../../layouts/Layout.astro";
     const name = sponsorNameInput.value.trim();
     const slug = slugify(sponsorSlugInput.value.trim() || name);
     const amount = Number(sponsorAmountInput.value);
-    const contactEmail = contactEmailInput.value.trim();
-    const description = sponsorDescInput.value.trim();
+    const perks = Array.from(document.querySelectorAll(".perk-input"))
+      .map((el) => el.value.trim())
+      .filter(Boolean);
 
     try {
       const res = await fetch(getApiUrl("/api/admin/sponsors"), {
@@ -869,8 +877,7 @@ import Layout from "../../layouts/Layout.astro";
           name,
           slug,
           amount,
-          contactEmail,
-          description,
+          perks,
         }),
       });
 
@@ -887,6 +894,7 @@ import Layout from "../../layouts/Layout.astro";
 
       // Reset form
       createSponsorForm.reset();
+      perksList.innerHTML = "";
       delete sponsorSlugInput.dataset.manual;
       updateUrlPreview();
 

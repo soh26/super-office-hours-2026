@@ -113,6 +113,15 @@ export async function sendSponsorConfirmation(env, session, options = {}) {
   const sponsorName = session.metadata?.sponsor_name || "";
   const contactName = session.metadata?.name || session.customer_details?.name || "";
   const description = session.metadata?.description || "";
+  let perks = [];
+  if (session.metadata?.perks) {
+    try {
+      perks = JSON.parse(session.metadata.perks);
+    } catch {
+      perks = [];
+    }
+  }
+
   const fetchFn = typeof options === "object" && options.fetchFn ? options.fetchFn : fetch;
 
   return await sendSponsorEmailWithBrevo(
@@ -123,6 +132,7 @@ export async function sendSponsorConfirmation(env, session, options = {}) {
       contactName,
       amount: session.amount_total,
       description,
+      perks,
     },
     fetchFn
   );

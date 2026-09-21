@@ -173,86 +173,165 @@ export async function sendConfirmationEmailWithBrevo(
 /**
  * Generates HTML and plain text for the separate Sponsor Confirmation Email.
  */
-export function buildSponsorEmail({ sponsorName, contactName, amount, description }) {
+export function buildSponsorEmail({ sponsorName, contactName, amount, description, perks }) {
   const safeSponsorName = escapeHtml(sponsorName || "Valued Sponsor");
   const displayName = contactName ? escapeHtml(contactName) : safeSponsorName;
-  const packageDesc = escapeHtml(description || "Super Office Hours Partnership & Sponsorship");
+  const formattedAmount = formatYen(amount);
+
+  const perkList = Array.isArray(perks) && perks.length > 0
+    ? perks.map((p) => String(p || "").trim()).filter(Boolean)
+    : (typeof description === "string" && description.trim()
+        ? description.split("\n").map((p) => p.trim()).filter(Boolean)
+        : []);
+
+  const perksHtml = perkList.length > 0
+    ? `<!-- Value Checklist -->
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
+                        ${perkList
+                          .map(
+                            (p) => `<tr>
+                          <td style="padding:3px 0;color:rgba(255,255,255,0.7);font-size:13px;line-height:1.5;">
+                            <span style="color:#2dd4bf;font-weight:800;margin-right:6px;">&#10003;</span> ${escapeHtml(p)}
+                          </td>
+                        </tr>`
+                          )
+                          .join("\n")}
+                      </table>`
+    : "";
 
   const html = `<!doctype html>
-<html>
-  <body style="margin:0;padding:0;background:#0a0a0c;font-family:Arial,Helvetica,sans-serif;">
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Office Hours — Sponsor Confirmation</title>
+  </head>
+  <body style="margin:0;padding:0;background:#0a0a0c;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0c;padding:32px 16px;">
       <tr>
         <td align="center">
-          <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;background:#1c1c22;border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden;">
+          <table role="presentation" width="540" cellpadding="0" cellspacing="0" style="max-width:540px;width:100%;background:#141418;border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden;box-shadow:0 20px 40px -15px rgba(0,0,0,0.7);">
+            
+            <!-- Site Header with Takeoff Tokyo Logo -->
             <tr>
-              <td style="padding:28px 32px 0 32px;">
-                <div style="font-weight:700;font-size:15px;letter-spacing:-0.02em;color:#ffffff;">
-                  TAKEOFF <span style="color:#2dd4bf;">tokyo</span>
+              <td style="padding:24px 32px;background:#0e0e12;border-bottom:1px solid rgba(255,255,255,0.08);">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td align="left" vertical-align="middle">
+                      <a href="https://soh.takeoff-tokyo.com/" target="_blank" style="text-decoration:none;display:inline-block;">
+                        <img
+                          src="https://s.takeoff-tokyo.com/images/takeoff-tokyo-logo.png"
+                          alt="TAKEOFF tokyo"
+                          height="26"
+                          style="height:26px;width:auto;display:block;border:0;outline:none;"
+                        />
+                      </a>
+                    </td>
+                    <td align="right" vertical-align="middle">
+                      <div style="display:inline-block;padding:3px 10px;border-radius:9999px;background:rgba(45,212,191,0.1);border:1px solid rgba(45,212,191,0.3);color:#2dd4bf;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">
+                        Sponsor Confirmation
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Hero Section matching Main Site -->
+            <tr>
+              <td align="center" style="padding:32px 32px 20px 32px;text-align:center;">
+                <!-- Tagline Badge -->
+                <div style="display:inline-block;padding:4px 14px;border-radius:9999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);font-size:11px;margin-bottom:16px;">
+                  By TAKEOFF tokyo &middot; Asia's flagship startup conference, since 2023
                 </div>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:20px 32px 0 32px;">
-                <div style="display:inline-block;padding:4px 12px;border-radius:9999px;background:rgba(168,85,247,0.15);color:#c084fc;font-size:12px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">
-                  Sponsor Confirmation
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:16px 32px 0 32px;">
-                <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:800;letter-spacing:-0.02em;">Thank you, ${safeSponsorName}!</h1>
-                <p style="margin:6px 0 0 0;color:rgba(255,255,255,0.6);font-size:14px;">Super Office Hours &middot; September 25, 2026 &middot; Dragon Gate, Shibuya, Tokyo</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:24px 32px 0 32px;">
-                <p style="margin:0 0 14px 0;color:#ffffff;font-size:15px;line-height:1.6;">Dear ${displayName},</p>
-                <p style="margin:0 0 14px 0;color:rgba(255,255,255,0.7);font-size:14px;line-height:1.6;">
-                  We are thrilled to welcome <strong>${safeSponsorName}</strong> as an official sponsor of Super Office Hours. Your support directly empowers the next generation of founders and investors taking off from Tokyo.
-                </p>
-                <p style="margin:0;color:rgba(255,255,255,0.7);font-size:14px;line-height:1.6;">
-                  Your sponsorship payment has been received and confirmed.
-                </p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:20px 32px 0 32px;">
-                <div style="background:#141418;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:18px 20px;">
-                  <div style="color:rgba(255,255,255,0.4);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">Sponsorship Summary</div>
-                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                    <tr>
-                      <td style="padding:4px 0;color:rgba(255,255,255,0.7);font-size:14px;">${packageDesc}</td>
-                      <td style="padding:4px 0;color:#ffffff;font-weight:700;font-size:15px;text-align:right;">${formatYen(amount)}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);color:#ffffff;font-weight:700;font-size:15px;">Total Paid</td>
-                      <td style="padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);color:#2dd4bf;font-weight:700;font-size:16px;text-align:right;">${formatYen(amount)}</td>
-                    </tr>
-                  </table>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:24px 32px 0 32px;">
-                <div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:20px;">
-                  <h3 style="margin:0 0 10px 0;color:#ffffff;font-size:15px;font-weight:700;">What happens next?</h3>
-                  <ul style="margin:0;padding-left:18px;color:rgba(255,255,255,0.7);font-size:13px;line-height:1.7;">
-                    <li>Our team will follow up directly regarding sponsor asset submissions (logos, bio, links).</li>
-                    <li>We will issue your team's delegate passes and VIP check-in instructions.</li>
-                    <li>If you require a Japanese qualified invoice / receipt (適格請求書), simply reply to this email.</li>
-                  </ul>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:28px 32px 32px 32px;">
-                <p style="margin:0;color:rgba(255,255,255,0.4);font-size:12px;line-height:1.6;">
-                  Have questions or special requests? Reply directly to this email or reach us at <a href="mailto:tickets@takeoff-tokyo.com" style="color:#2dd4bf;text-decoration:none;">tickets@takeoff-tokyo.com</a>.<br/>
-                  &copy; 2026 TAKEOFF tokyo. All rights reserved.
+
+                <!-- Event Title -->
+                <h1 style="margin:0 0 6px 0;color:#ffffff;font-size:28px;font-weight:900;letter-spacing:-0.03em;text-transform:uppercase;line-height:1.1;">
+                  SUPER OFFICE HOURS
+                </h1>
+                <p style="margin:0;color:rgba(255,255,255,0.6);font-size:14px;letter-spacing:-0.01em;">
+                  September 25, 2026 &middot; Dragon Gate, Shibuya, Tokyo
                 </p>
               </td>
             </tr>
+
+            <!-- Event Stats Ribbon -->
+            <tr>
+              <td style="padding:0 32px 24px 32px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid rgba(255,255,255,0.08);border-bottom:1px solid rgba(255,255,255,0.08);padding:14px 0;">
+                  <tr>
+                    <td align="center" width="33%" style="text-align:center;">
+                      <div style="font-size:18px;font-weight:800;color:#ffffff;line-height:1.1;">50</div>
+                      <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;">investors</div>
+                    </td>
+                    <td align="center" width="33%" style="text-align:center;border-left:1px solid rgba(255,255,255,0.06);border-right:1px solid rgba(255,255,255,0.06);">
+                      <div style="font-size:18px;font-weight:800;color:#ffffff;line-height:1.1;">100</div>
+                      <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;">startups</div>
+                    </td>
+                    <td align="center" width="33%" style="text-align:center;">
+                      <div style="font-size:18px;font-weight:800;color:#ffffff;line-height:1.1;">400</div>
+                      <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;">meetings</div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Sponsor Welcome Note -->
+            <tr>
+              <td style="padding:0 32px 24px 32px;">
+                <p style="margin:0 0 12px 0;color:#ffffff;font-size:16px;line-height:1.6;font-weight:600;">Dear ${displayName},</p>
+                <p style="margin:0;color:rgba(255,255,255,0.7);font-size:14px;line-height:1.65;">
+                  We are honored to welcome <strong>${safeSponsorName}</strong> as an official sponsor of Super Office Hours. Your support directly powers founders and investors taking off from Tokyo.
+                </p>
+              </td>
+            </tr>
+
+            <!-- Featured Ticket Card styling from main site -->
+            <tr>
+              <td style="padding:0 32px 24px 32px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#1c1c22;border:1px solid #2dd4bf;border-radius:14px;overflow:hidden;box-shadow:0 0 24px -6px rgba(45,212,191,0.2);">
+                  <tr>
+                    <td style="padding:22px 24px;">
+                      <div style="color:#2dd4bf;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">
+                        Partner Package
+                      </div>
+                      <div style="color:#ffffff;font-size:18px;font-weight:800;letter-spacing:-0.02em;margin-bottom:12px;">
+                        ${safeSponsorName} Sponsorship
+                      </div>
+                      
+                      ${perksHtml}
+
+                      <!-- Total Paid Summary -->
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid rgba(255,255,255,0.08);padding-top:14px;">
+                        <tr>
+                          <td style="color:#ffffff;font-weight:700;font-size:15px;">Total Paid</td>
+                          <td align="right" style="color:#2dd4bf;font-weight:800;font-size:20px;text-align:right;">
+                            ${formattedAmount} <span style="font-size:11px;font-weight:600;color:rgba(45,212,191,0.8);">JPY</span>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Help / Contact Footer matching Main Site -->
+            <tr>
+              <td style="padding:20px 32px 28px 32px;background:#0e0e12;border-top:1px solid rgba(255,255,255,0.08);">
+                <p style="margin:0 0 10px 0;color:rgba(255,255,255,0.5);font-size:12px;line-height:1.6;">
+                  Have questions or need to submit your high-res logo? Reply directly to this email or reach our partnership team at <a href="mailto:tickets@takeoff-tokyo.com" style="color:#2dd4bf;text-decoration:none;">tickets@takeoff-tokyo.com</a>.
+                </p>
+                <div style="font-size:11px;color:rgba(255,255,255,0.3);line-height:1.5;">
+                  &copy; 2026 TAKEOFF tokyo. Super Office Hours &middot; Dragon Gate, Shibuya, Tokyo.<br/>
+                  <a href="https://www.takeoff-tokyo.com/terms-conditions" target="_blank" style="color:rgba(255,255,255,0.4);text-decoration:none;">Terms &amp; Conditions</a> &middot;
+                  <a href="https://www.takeoff-tokyo.com/privacy-policy" target="_blank" style="color:rgba(255,255,255,0.4);text-decoration:none;">Privacy Policy</a> &middot;
+                  <a href="https://www.takeoff-tokyo.com/scta" target="_blank" style="color:rgba(255,255,255,0.4);text-decoration:none;">Commercial Disclosure</a>
+                </div>
+              </td>
+            </tr>
+
           </table>
         </td>
       </tr>
@@ -260,28 +339,27 @@ export function buildSponsorEmail({ sponsorName, contactName, amount, descriptio
   </body>
 </html>`;
 
-  const text = `Super Office Hours — Sponsor Confirmation
+  const perksText = perkList.length > 0
+    ? `\nPackage Benefits:\n${perkList.map((p) => `✓ ${p}`).join("\n")}\n`
+    : "";
+
+  const text = `SUPER OFFICE HOURS — SPONSOR CONFIRMATION
 
 Thank you, ${sponsorName || "Valued Sponsor"}!
 
 Dear ${contactName || sponsorName || "Partner"},
 
 We are thrilled to welcome ${sponsorName || "your company"} as an official sponsor of Super Office Hours!
-Your support directly empowers the next generation of founders and investors taking off from Tokyo.
+Your support directly powers founders and investors taking off from Tokyo.
 
 Event Details:
 September 25, 2026 · Dragon Gate, Shibuya, Tokyo
+50 investors · 100 startups · 400 meetings
 
-Sponsorship Summary:
-${description || "Super Office Hours Partnership & Sponsorship"}
-Total Paid: ${formatYen(amount)}
-
-What happens next?
-- Our team will follow up directly regarding sponsor asset submissions (logos, bio, links).
-- We will issue your team's delegate passes and VIP check-in instructions.
-- If you require a Japanese qualified invoice / receipt (適格請求書), reply to this email.
-
-Questions? Reply to this email — our partnership team is here to support you.
+Package: ${safeSponsorName} Sponsorship
+Total Paid: ${formattedAmount} JPY
+${perksText}
+Questions? Reply to this email — our partnership team is here to help.
 © 2026 TAKEOFF tokyo. All rights reserved.`;
 
   return { html, text };
@@ -292,7 +370,7 @@ Questions? Reply to this email — our partnership team is here to support you.
  */
 export async function sendSponsorEmailWithBrevo(
   env,
-  { to, sponsorName, contactName, amount = 0, description },
+  { to, sponsorName, contactName, amount = 0, description, perks },
   fetchFn = fetch
 ) {
   const apiKey = (env.BREVO_API_KEY || "").trim();
@@ -309,6 +387,7 @@ export async function sendSponsorEmailWithBrevo(
     contactName,
     amount,
     description,
+    perks,
   });
 
   const payload = {

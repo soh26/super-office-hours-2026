@@ -17,26 +17,50 @@ import { onRequest as middlewareHandle } from "../functions/_middleware.js";
 import { sendSponsorConfirmation } from "../functions/api/stripe-webhook.js";
 
 describe("Sponsor Email Helper (functions/lib/email.js)", () => {
-  test("buildSponsorEmail renders valid HTML and text with custom sponsor name and JPY amount", () => {
+  test("buildSponsorEmail renders without implicit addons when no perks are provided", () => {
     const { html, text } = buildSponsorEmail({
       sponsorName: "Acme Corp <Japan>",
       contactName: "Alice Tanaka",
       amount: 500000,
-      description: "Gold Partner Package",
     });
 
-    // Verify HTML escaping
+    // Verify HTML escaping and structure
     assert.match(html, /Acme Corp &lt;Japan&gt;/);
     assert.match(html, /Alice Tanaka/);
+    assert.match(html, /Total Paid/);
     assert.match(html, /¥500,000/);
-    assert.match(html, /Gold Partner Package/);
     assert.match(html, /Sponsor Confirmation/i);
-    assert.match(html, /What happens next\?/);
+    assert.doesNotMatch(html, /What happens next\?/);
+    assert.doesNotMatch(html, /Full executive event access/);
+    assert.doesNotMatch(html, /VIP networking &amp; matchmaking/);
+    assert.doesNotMatch(html, /Value Checklist/);
 
     // Verify Plain Text
     assert.match(text, /Acme Corp <Japan>/);
-    assert.match(text, /¥500,000/);
+    assert.match(text, /Total Paid: ¥500,000/);
     assert.match(text, /Super Office Hours/);
+    assert.doesNotMatch(text, /What happens next\?/);
+    assert.doesNotMatch(text, /Package Benefits:/);
+    assert.doesNotMatch(text, /Full executive event access/);
+  });
+
+  test("buildSponsorEmail renders only explicit perks when provided", () => {
+    const { html, text } = buildSponsorEmail({
+      sponsorName: "Acme Corp",
+      contactName: "Alice Tanaka",
+      amount: 500000,
+      perks: ["10 VIP tickets", "Exhibition booth at Dragon Gate"],
+    });
+
+    // Verify HTML has explicit perks and no hardcoded ones
+    assert.match(html, /10 VIP tickets/);
+    assert.match(html, /Exhibition booth at Dragon Gate/);
+    assert.doesNotMatch(html, /Full executive event access/);
+
+    // Verify plain text
+    assert.match(text, /Package Benefits:/);
+    assert.match(text, /✓ 10 VIP tickets/);
+    assert.match(text, /✓ Exhibition booth at Dragon Gate/);
   });
 
   test("sendSponsorEmailWithBrevo dispatches payload to Brevo API", async () => {
@@ -209,6 +233,9 @@ describe("Sponsor Checkout Flow (functions/api/create-sponsor-checkout.js)", () 
                 slug: "mega-corp",
                 amount: 750000,
                 status: "pending",
+                metadata: {
+                  perks: ["5 Executive Badges", "Logo on Site"],
+                },
               },
             ]),
             { status: 200 }
@@ -245,6 +272,7 @@ describe("Sponsor Checkout Flow (functions/api/create-sponsor-checkout.js)", () 
       assert.equal(stripeCapturedBody.get("metadata[sponsor_id]"), "sp-mega-999");
       assert.equal(stripeCapturedBody.get("metadata[sponsor_slug]"), "mega-corp");
       assert.equal(stripeCapturedBody.get("metadata[sponsor_name]"), "Mega Corp");
+      assert.equal(stripeCapturedBody.get("metadata[perks]"), JSON.stringify(["5 Executive Badges", "Logo on Site"]));
       assert.equal(stripeCapturedBody.get("line_items[0][price_data][unit_amount]"), "750000");
       assert.equal(stripeCapturedBody.get("line_items[0][price_data][currency]"), "jpy");
       assert.equal(
@@ -395,6 +423,8 @@ describe("Sponsor Webhook Confirmation (functions/api/stripe-webhook.js)", () =>
       const body = JSON.parse(options.body);
       assert.equal(body.to[0].email, "partner@sponsor.com");
       assert.match(body.subject, /Acme Co/);
+      assert.match(body.htmlContent, /Stage Mention/);
+      assert.match(body.textContent, /Stage Mention/);
       return new Response(JSON.stringify({ messageId: "msg_webhook_sponsor" }), { status: 200 });
     };
 
@@ -410,6 +440,7 @@ describe("Sponsor Webhook Confirmation (functions/api/stripe-webhook.js)", () =>
         type: "sponsor",
         sponsor_name: "Acme Co",
         name: "Jane Doe",
+        perks: JSON.stringify(["Stage Mention"]),
       },
     };
 
