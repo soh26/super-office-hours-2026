@@ -163,3 +163,155 @@ export async function recordPaidRegistration(env, session, lineItems = [], fetch
     return null;
   }
 }
+
+/**
+ * Creates a custom sponsor link record.
+ */
+export async function createSponsor(env, data, fetchFn = fetch) {
+  const config = getSupabaseConfig(env);
+  if (!config) return null;
+
+  const payload = {
+    id: data.id || crypto.randomUUID(),
+    name: data.name,
+    slug: data.slug,
+    amount: Number(data.amount),
+    currency: data.currency || "jpy",
+    description: data.description || null,
+    contact_email: data.contactEmail || null,
+    status: data.status || "pending",
+    metadata: data.metadata || {},
+  };
+
+  try {
+    const res = await fetchFn(`${config.url}/rest/v1/sponsors`, {
+      method: "POST",
+      headers: getHeaders(config.key),
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn(`[Supabase] Create sponsor returned ${res.status}: ${errText}`);
+      return null;
+    }
+
+    const inserted = await res.json();
+    return Array.isArray(inserted) ? inserted[0] : inserted;
+  } catch (err) {
+    console.warn("[Supabase] Failed to create sponsor:", err.message);
+    return null;
+  }
+}
+
+/**
+ * Fetches a sponsor by their custom URL slug.
+ */
+export async function getSponsorBySlug(env, slug, fetchFn = fetch) {
+  const config = getSupabaseConfig(env);
+  if (!config) return null;
+
+  try {
+    const cleanSlug = encodeURIComponent(String(slug).trim().toLowerCase());
+    const res = await fetchFn(`${config.url}/rest/v1/sponsors?slug=eq.${cleanSlug}&limit=1`, {
+      method: "GET",
+      headers: getHeaders(config.key),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn(`[Supabase] Fetch sponsor by slug returned ${res.status}: ${errText}`);
+      return null;
+    }
+
+    const rows = await res.json();
+    return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+  } catch (err) {
+    console.warn("[Supabase] Failed to fetch sponsor by slug:", err.message);
+    return null;
+  }
+}
+
+/**
+ * Lists all sponsors ordered by creation time descending.
+ */
+export async function listSponsors(env, fetchFn = fetch) {
+  const config = getSupabaseConfig(env);
+  if (!config) return [];
+
+  try {
+    const res = await fetchFn(`${config.url}/rest/v1/sponsors?order=created_at.desc`, {
+      method: "GET",
+      headers: getHeaders(config.key),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn(`[Supabase] List sponsors returned ${res.status}: ${errText}`);
+      return [];
+    }
+
+    const rows = await res.json();
+    return Array.isArray(rows) ? rows : [];
+  } catch (err) {
+    console.warn("[Supabase] Failed to list sponsors:", err.message);
+    return [];
+  }
+}
+
+/**
+ * Updates a sponsor record to paid after a successful Stripe checkout session.
+ */
+export async function recordPaidSponsor(env, session, fetchFn = fetch) {
+  const config = getSupabaseConfig(env);
+  if (!config) return null;
+
+  const sponsorId = session.metadata?.sponsor_id;
+  const sponsorSlug = session.metadata?.sponsor_slug;
+  const payerName = session.metadata?.name || session.customer_details?.name || "";
+  const payerEmail = session.customer_details?.email || session.customer_email || session.metadata?.email || "";
+
+  const updatePayload = {
+    status: "paid",
+    stripe_session_id: session.id,
+    stripe_payment_intent: session.payment_intent || null,
+    paid_at: new Date().toISOString(),
+    paid_by_name: payerName,
+    paid_by_email: payerEmail,
+    metadata: {
+      amount_total: session.amount_total,
+      currency: session.currency,
+      paid_at: new Date().toISOString(),
+    },
+  };
+
+  try {
+    let queryParam = "";
+    if (sponsorId) {
+      queryParam = `id=eq.${encodeURIComponent(sponsorId)}`;
+    } else if (sponsorSlug) {
+      queryParam = `slug=eq.${encodeURIComponent(sponsorSlug.toLowerCase())}`;
+    } else {
+      console.warn("[Supabase] recordPaidSponsor requires sponsor_id or sponsor_slug");
+      return null;
+    }
+
+    const res = await fetchFn(`${config.url}/rest/v1/sponsors?${queryParam}`, {
+      method: "PATCH",
+      headers: getHeaders(config.key),
+      body: JSON.stringify(updatePayload),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn(`[Supabase] Update sponsor paid status returned ${res.status}: ${errText}`);
+      return null;
+    }
+
+    const updated = await res.json();
+    return Array.isArray(updated) && updated.length > 0 ? updated[0] : null;
+  } catch (err) {
+    console.warn("[Supabase] Failed to update sponsor paid status:", err.message);
+    return null;
+  }
+}

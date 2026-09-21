@@ -1,0 +1,900 @@
+---
+import Layout from "../../layouts/Layout.astro";
+---
+
+<Layout title="Sponsor Link Management — Super Office Hours">
+  <div class="admin-wrapper">
+    <!-- Top Navigation -->
+    <header class="admin-header">
+      <div class="admin-header-inner">
+        <a href="/" class="admin-logo">
+          TAKEOFF <span>tokyo</span>
+          <span class="admin-tag">Admin</span>
+        </a>
+        <div id="authActions" style="display:none;">
+          <button id="logoutBtn" class="btn btn-ghost">Lock Dashboard</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 1. Password Lock Overlay (Shown when unauthenticated) -->
+    <div id="lockView" class="auth-center">
+      <div class="auth-card">
+        <div class="auth-icon">🔒</div>
+        <h2>Organizer Access</h2>
+        <p class="auth-desc">Enter the sponsor administration password to manage custom sponsor payment links.</p>
+
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="adminPassword">Password</label>
+            <input
+              type="password"
+              id="adminPassword"
+              class="input-field"
+              placeholder="Enter password"
+              autocomplete="current-password"
+              required
+            />
+          </div>
+          <div id="authError" class="alert-error" style="display:none;"></div>
+          <button type="submit" id="unlockBtn" class="btn btn-primary" style="width:100%;margin-top:1.25rem;">
+            Unlock Dashboard &rarr;
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 2. Admin Dashboard (Revealed after successful password verification) -->
+    <main id="dashboardView" class="dashboard-container" style="display:none;">
+      <div class="dashboard-head">
+        <div>
+          <h1>Sponsor Links & Custom Checkouts</h1>
+          <p class="text-muted">Create tailored checkout links and initiate Stripe payments for sponsors.</p>
+        </div>
+      </div>
+
+      <!-- Link Creation Form Card -->
+      <section class="card form-card">
+        <div class="card-header">
+          <div class="card-badge">Step 1</div>
+          <h2>Create New Sponsor Link</h2>
+          <p class="card-subtitle">Each sponsor receives a dedicated checkout URL with their agreed sponsorship amount.</p>
+        </div>
+
+        <form id="createSponsorForm" class="create-form">
+          <div class="grid-2">
+            <div class="form-group">
+              <label for="sponsorName">Sponsor / Company Name <span class="req">*</span></label>
+              <input
+                type="text"
+                id="sponsorName"
+                class="input-field"
+                placeholder="e.g. Acme Innovations Inc."
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="sponsorSlug">Custom URL Slug <span class="req">*</span></label>
+              <input
+                type="text"
+                id="sponsorSlug"
+                class="input-field"
+                placeholder="e.g. acme-innovations"
+                required
+              />
+            </div>
+          </div>
+
+          <!-- Live URL Preview -->
+          <div class="url-preview-box">
+            <span class="url-preview-label">Generated Sponsor URL:</span>
+            <code id="urlPreview">https://soh.takeoff-tokyo.com/thanks-acme-innovations</code>
+          </div>
+
+          <div class="grid-2" style="margin-top:1.25rem;">
+            <div class="form-group">
+              <label for="sponsorAmount">Sponsorship Amount (JPY) <span class="req">*</span></label>
+              <div class="input-prefix-wrapper">
+                <span class="input-prefix">¥</span>
+                <input
+                  type="number"
+                  id="sponsorAmount"
+                  class="input-field with-prefix"
+                  placeholder="300000"
+                  min="50"
+                  step="1"
+                  required
+                />
+              </div>
+              <div class="preset-pills">
+                <button type="button" class="pill" data-amount="100000">¥100K</button>
+                <button type="button" class="pill" data-amount="250000">¥250K</button>
+                <button type="button" class="pill" data-amount="500000">¥500K</button>
+                <button type="button" class="pill" data-amount="1000000">¥1M</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="contactEmail">Sponsor Billing / Contact Email</label>
+              <input
+                type="email"
+                id="contactEmail"
+                class="input-field"
+                placeholder="partner@sponsor.com (optional)"
+              />
+              <span class="field-hint">Prefills email for checkout and sends receipt</span>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:1.25rem;">
+            <label for="sponsorDesc">Package / Invoice Description</label>
+            <input
+              type="text"
+              id="sponsorDesc"
+              class="input-field"
+              placeholder="e.g. Gold Partner Sponsor Package (includes 4 VIP passes & logo showcase)"
+            />
+          </div>
+
+          <div id="formError" class="alert-error" style="display:none;margin-top:1rem;"></div>
+
+          <div class="form-actions">
+            <button type="submit" id="submitBtn" class="btn btn-accent">
+              <span id="submitSpinner" class="spinner" style="display:none;"></span>
+              <span id="submitText">Generate Custom Sponsor Link &rarr;</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Success Notification Box (Populated after link creation) -->
+      <section id="createdAlert" class="card success-banner" style="display:none;">
+        <div class="success-banner-inner">
+          <div class="success-icon">✓</div>
+          <div class="success-content">
+            <h3>Sponsor Link Created!</h3>
+            <p>Send this custom link directly to the sponsor representative:</p>
+            <div class="copy-url-row">
+              <input type="text" id="createdUrlInput" class="input-field copy-field" readonly />
+              <button type="button" id="copyUrlBtn" class="btn btn-secondary">Copy Link</button>
+              <a id="testUrlLink" href="#" target="_blank" class="btn btn-ghost">Open Page &nearr;</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Existing Sponsors Table -->
+      <section class="card table-card" style="margin-top:2.5rem;">
+        <div class="table-header">
+          <div>
+            <h2>Existing Sponsor Links</h2>
+            <p class="text-muted">Track payment status and copy custom links.</p>
+          </div>
+          <button type="button" id="refreshBtn" class="btn btn-sm btn-ghost">Refresh List</button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="sponsor-table">
+            <thead>
+              <tr>
+                <th>Sponsor Name</th>
+                <th>Custom URL</th>
+                <th>Amount (JPY)</th>
+                <th>Payment Status</th>
+                <th>Created</th>
+                <th style="text-align:right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="sponsorsTbody">
+              <tr>
+                <td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">
+                  Loading sponsors...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+</Layout>
+
+<style>
+  .admin-wrapper {
+    min-height: 100vh;
+    background: #0a0a0c;
+    color: #f3f4f6;
+    display: flex;
+    flex-direction: column;
+  }
+  .admin-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(10, 10, 12, 0.85);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .admin-header-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .admin-logo {
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: #fff;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .admin-logo span { color: #2dd4bf; }
+  .admin-tag {
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: rgba(168, 85, 247, 0.2);
+    border: 1px solid rgba(168, 85, 247, 0.4);
+    color: #c084fc;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* Password Lock View */
+  .auth-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.5rem;
+  }
+  .auth-card {
+    background: #141418;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 2.5rem 2rem;
+    max-width: 440px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+  }
+  .auth-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+  }
+  .auth-card h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.5rem;
+  }
+  .auth-desc {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 1.75rem;
+  }
+
+  /* Dashboard View */
+  .dashboard-container {
+    max-width: 1100px;
+    margin: 2.5rem auto;
+    padding: 0 1.5rem;
+    width: 100%;
+    flex: 1;
+  }
+  .dashboard-head {
+    margin-bottom: 2rem;
+  }
+  .dashboard-head h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 0.35rem;
+  }
+  .text-muted {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.95rem;
+  }
+
+  /* Cards */
+  .card {
+    background: #141418;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .form-card {
+    padding: 2rem;
+  }
+  .card-header {
+    margin-bottom: 1.75rem;
+  }
+  .card-badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #2dd4bf;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.25rem;
+  }
+  .card-header h2 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #fff;
+  }
+  .card-subtitle {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.88rem;
+    margin-top: 0.2rem;
+  }
+
+  /* Forms */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+  @media (max-width: 680px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+  }
+  label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 0.4rem;
+  }
+  .req { color: #f87171; }
+  .field-hint {
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.4);
+    margin-top: 0.35rem;
+  }
+  .input-field {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.95rem;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+  }
+  .input-field:focus {
+    outline: none;
+    border-color: #2dd4bf;
+    box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.2);
+    background: rgba(255, 255, 255, 0.07);
+  }
+  .input-prefix-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .input-prefix {
+    position: absolute;
+    left: 1rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: 600;
+  }
+  .input-field.with-prefix {
+    padding-left: 2rem;
+  }
+  .preset-pills {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.45rem;
+  }
+  .pill {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.7);
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s ease;
+  }
+  .pill:hover {
+    background: rgba(45, 212, 191, 0.15);
+    border-color: rgba(45, 212, 191, 0.4);
+    color: #2dd4bf;
+  }
+  .url-preview-box {
+    margin-top: 0.85rem;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px dashed rgba(255, 255, 255, 0.15);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .url-preview-label {
+    color: rgba(255, 255, 255, 0.5);
+  }
+  .url-preview-box code {
+    color: #2dd4bf;
+    font-family: monospace;
+    font-size: 0.9rem;
+  }
+  .form-actions {
+    margin-top: 1.75rem;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.35rem;
+    border-radius: 10px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    text-decoration: none;
+  }
+  .btn-primary {
+    background: #2dd4bf;
+    color: #0a0a0c;
+  }
+  .btn-primary:hover {
+    background: #38e6d0;
+  }
+  .btn-accent {
+    background: linear-gradient(135deg, #2dd4bf, #06b6d4);
+    color: #0a0a0c;
+    box-shadow: 0 4px 14px rgba(45, 212, 191, 0.25);
+  }
+  .btn-accent:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+  }
+  .btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+  .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.18);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .btn-ghost:hover {
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.25);
+  }
+  .btn-sm {
+    padding: 0.4rem 0.85rem;
+    font-size: 0.8rem;
+  }
+
+  /* Alerts */
+  .alert-error {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    color: #f87171;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    text-align: left;
+  }
+  .success-banner {
+    margin-top: 1.5rem;
+    padding: 1.5rem 2rem;
+    background: rgba(45, 212, 191, 0.08);
+    border-color: rgba(45, 212, 191, 0.3);
+  }
+  .success-banner-inner {
+    display: flex;
+    gap: 1.25rem;
+    align-items: flex-start;
+  }
+  .success-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(45, 212, 191, 0.2);
+    color: #2dd4bf;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+  .success-content {
+    flex: 1;
+  }
+  .success-content h3 {
+    font-size: 1.15rem;
+    color: #2dd4bf;
+    margin-bottom: 0.25rem;
+  }
+  .success-content p {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+    margin-bottom: 0.85rem;
+  }
+  .copy-url-row {
+    display: flex;
+    gap: 0.65rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .copy-field {
+    flex: 1;
+    min-width: 280px;
+    background: rgba(0, 0, 0, 0.4);
+    font-family: monospace;
+    font-size: 0.9rem;
+    color: #2dd4bf;
+  }
+
+  /* Table */
+  .table-card {
+    padding: 1.75rem 2rem;
+  }
+  .table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+  .table-header h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+  }
+  .table-responsive {
+    overflow-x: auto;
+  }
+  .sponsor-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  .sponsor-table th {
+    text-align: left;
+    padding: 0.75rem 1rem;
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .sponsor-table td {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    vertical-align: middle;
+  }
+  .sponsor-table tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+  }
+  .status-badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+  .status-pending {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+  .status-paid {
+    background: rgba(45, 212, 191, 0.15);
+    color: #2dd4bf;
+    border: 1px solid rgba(45, 212, 191, 0.3);
+  }
+  .spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(0,0,0,0.2);
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<script>
+  // @ts-nocheck
+  const STORAGE_KEY = "soh_admin_password";
+
+  // Elements
+  const lockView = document.getElementById("lockView");
+  const dashboardView = document.getElementById("dashboardView");
+  const authActions = document.getElementById("authActions");
+  const loginForm = document.getElementById("loginForm");
+  const adminPasswordInput = document.getElementById("adminPassword");
+  const authError = document.getElementById("authError");
+  const logoutBtn = document.getElementById("logoutBtn");
+
+  const sponsorNameInput = document.getElementById("sponsorName");
+  const sponsorSlugInput = document.getElementById("sponsorSlug");
+  const sponsorAmountInput = document.getElementById("sponsorAmount");
+  const contactEmailInput = document.getElementById("contactEmail");
+  const sponsorDescInput = document.getElementById("sponsorDesc");
+  const urlPreview = document.getElementById("urlPreview");
+  const createSponsorForm = document.getElementById("createSponsorForm");
+  const submitBtn = document.getElementById("submitBtn");
+  const submitSpinner = document.getElementById("submitSpinner");
+  const submitText = document.getElementById("submitText");
+  const formError = document.getElementById("formError");
+
+  const createdAlert = document.getElementById("createdAlert");
+  const createdUrlInput = document.getElementById("createdUrlInput");
+  const copyUrlBtn = document.getElementById("copyUrlBtn");
+  const testUrlLink = document.getElementById("testUrlLink");
+
+  const refreshBtn = document.getElementById("refreshBtn");
+  const sponsorsTbody = document.getElementById("sponsorsTbody");
+
+  // Slug generator helper
+  function slugify(text) {
+    return text
+      .toString()
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  function updateUrlPreview() {
+    const slug = slugify(sponsorSlugInput.value.trim() || sponsorNameInput.value.trim() || "sponsor-name");
+    const origin = window.location.origin;
+    urlPreview.textContent = `${origin}/thanks-${slug}`;
+  }
+
+  sponsorNameInput.addEventListener("input", () => {
+    if (!sponsorSlugInput.dataset.manual) {
+      sponsorSlugInput.value = slugify(sponsorNameInput.value);
+    }
+    updateUrlPreview();
+  });
+
+  sponsorSlugInput.addEventListener("input", () => {
+    sponsorSlugInput.dataset.manual = "true";
+    updateUrlPreview();
+  });
+
+  // Preset pills
+  document.querySelectorAll(".preset-pills .pill").forEach((pill) => {
+    pill.addEventListener("click", () => {
+      sponsorAmountInput.value = pill.getAttribute("data-amount");
+    });
+  });
+
+  // Auth flow
+  function getStoredPassword() {
+    return sessionStorage.getItem(STORAGE_KEY) || "";
+  }
+
+  function showDashboard() {
+    lockView.style.display = "none";
+    dashboardView.style.display = "block";
+    authActions.style.display = "block";
+    updateUrlPreview();
+    loadSponsors();
+  }
+
+  function showLock() {
+    lockView.style.display = "flex";
+    dashboardView.style.display = "none";
+    authActions.style.display = "none";
+    sessionStorage.removeItem(STORAGE_KEY);
+    adminPasswordInput.value = "";
+  }
+
+  logoutBtn.addEventListener("click", showLock);
+
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    authError.style.display = "none";
+    const password = adminPasswordInput.value.trim();
+
+    try {
+      const res = await fetch("/api/admin/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Authentication failed");
+      }
+
+      sessionStorage.setItem(STORAGE_KEY, password);
+      showDashboard();
+    } catch (err) {
+      authError.textContent = err.message || "Invalid password";
+      authError.style.display = "block";
+    }
+  });
+
+  // Load sponsors table
+  async function loadSponsors() {
+    const password = getStoredPassword();
+    if (!password) return showLock();
+
+    sponsorsTbody.innerHTML = `
+      <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Loading sponsors...</td></tr>
+    `;
+
+    try {
+      const res = await fetch("/api/admin/sponsors", {
+        headers: { Authorization: `Bearer ${password}` },
+      });
+
+      if (res.status === 401) {
+        return showLock();
+      }
+
+      const data = await res.json();
+      const sponsors = data.sponsors || [];
+
+      if (sponsors.length === 0) {
+        sponsorsTbody.innerHTML = `
+          <tr><td colspan="6" style="text-align:center;padding:2rem;color:rgba(255,255,255,0.4);">No sponsor links created yet. Use the form above to generate one!</td></tr>
+        `;
+        return;
+      }
+
+      const origin = window.location.origin;
+      sponsorsTbody.innerHTML = sponsors.map((s) => {
+        const url = s.url || `${origin}/thanks-${s.slug}`;
+        const isPaid = s.status === "paid";
+        const statusClass = isPaid ? "status-paid" : "status-pending";
+        const formattedAmount = "¥" + Number(s.amount || 0).toLocaleString();
+        const dateStr = s.created_at ? new Date(s.created_at).toLocaleDateString() : "-";
+
+        return `
+          <tr>
+            <td><strong style="color:#fff;">${escape(s.name)}</strong></td>
+            <td><a href="${escape(url)}" target="_blank" style="color:#2dd4bf;text-decoration:none;font-family:monospace;font-size:0.85rem;">/thanks-${escape(s.slug)}</a></td>
+            <td><strong style="color:#fff;">${formattedAmount}</strong></td>
+            <td><span class="status-badge ${statusClass}">${isPaid ? "Paid ✓" : "Pending"}</span></td>
+            <td style="color:rgba(255,255,255,0.5);font-size:0.85rem;">${dateStr}</td>
+            <td style="text-align:right;">
+              <button class="btn btn-sm btn-secondary copy-link-btn" data-url="${escape(url)}">Copy</button>
+              <a href="${escape(url)}" target="_blank" class="btn btn-sm btn-ghost">&nearr;</a>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      // Bind copy buttons in table
+      document.querySelectorAll(".copy-link-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const url = btn.getAttribute("data-url");
+          navigator.clipboard.writeText(url).then(() => {
+            const originalText = btn.textContent;
+            btn.textContent = "Copied!";
+            setTimeout(() => { btn.textContent = originalText; }, 2000);
+          });
+        });
+      });
+    } catch (err) {
+      sponsorsTbody.innerHTML = `
+        <tr><td colspan="6" style="text-align:center;padding:2rem;color:#f87171;">Failed to load sponsors: ${escape(err.message)}</td></tr>
+      `;
+    }
+  }
+
+  refreshBtn.addEventListener("click", loadSponsors);
+
+  // Create sponsor link submission
+  createSponsorForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    formError.style.display = "none";
+    createdAlert.style.display = "none";
+
+    const password = getStoredPassword();
+    if (!password) return showLock();
+
+    submitBtn.disabled = true;
+    submitSpinner.style.display = "inline-block";
+    submitText.textContent = "Creating sponsor link...";
+
+    const name = sponsorNameInput.value.trim();
+    const slug = slugify(sponsorSlugInput.value.trim() || name);
+    const amount = Number(sponsorAmountInput.value);
+    const contactEmail = contactEmailInput.value.trim();
+    const description = sponsorDescInput.value.trim();
+
+    try {
+      const res = await fetch("/api/admin/sponsors", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${password}`,
+        },
+        body: JSON.stringify({
+          name,
+          slug,
+          amount,
+          contactEmail,
+          description,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create sponsor link");
+      }
+
+      // Show success alert
+      createdUrlInput.value = data.url;
+      testUrlLink.href = data.url;
+      createdAlert.style.display = "block";
+      createdAlert.scrollIntoView({ behavior: "smooth" });
+
+      // Reset form
+      createSponsorForm.reset();
+      delete sponsorSlugInput.dataset.manual;
+      updateUrlPreview();
+
+      // Reload table
+      loadSponsors();
+    } catch (err) {
+      formError.textContent = err.message || "An error occurred";
+      formError.style.display = "block";
+    } finally {
+      submitBtn.disabled = false;
+      submitSpinner.style.display = "none";
+      submitText.textContent = "Generate Custom Sponsor Link →";
+    }
+  });
+
+  // Copy created URL
+  copyUrlBtn.addEventListener("click", () => {
+    createdUrlInput.select();
+    navigator.clipboard.writeText(createdUrlInput.value).then(() => {
+      copyUrlBtn.textContent = "Copied!";
+      setTimeout(() => { copyUrlBtn.textContent = "Copy Link"; }, 2000);
+    });
+  });
+
+  function escape(str) {
+    return String(str || "").replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    })[c]);
+  }
+
+  // Initial auto-login check
+  if (getStoredPassword()) {
+    showDashboard();
+  }
+</script>
