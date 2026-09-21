@@ -230,7 +230,7 @@ async function renderSponsorPage(context, slug, url) {
       border-radius: 16px;
       padding: 1.75rem 2rem;
       text-align: center;
-      margin-bottom: 2.5rem;
+      margin: 2.5rem 0;
       box-shadow: 0 8px 30px -10px var(--accent-glow);
     }
     .partner-tag {

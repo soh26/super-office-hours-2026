@@ -127,12 +127,17 @@ import Layout from "../../layouts/Layout.astro";
           <div class="form-group" style="margin-top:1.5rem;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
               <label style="margin-bottom:0;">Package / Invoice Description (Explicit Inclusions)</label>
-              <button type="button" id="addPerkBtn" class="pill" style="color:#2dd4bf;border-color:rgba(45,212,191,0.4);font-weight:600;">+ Add Entry</button>
+              <button type="button" id="addPerkBtn" class="add-perk-btn">
+                <span class="plus-icon">+</span> Add Entry
+              </button>
             </div>
             <span class="field-hint" style="margin-top:0;margin-bottom:0.75rem;">
               Enter each addon/perk as an explicit entry. If no entries are added, no addons or bullet points will appear.
             </span>
-            <div id="perksList" style="display:flex;flex-direction:column;gap:0.6rem;">
+            <div id="perksEmptyNote" class="perks-empty-note">
+              No custom perks added. Click <strong>+ Add Entry</strong> to specify inclusions, or leave empty for no addons.
+            </div>
+            <div id="perksList" class="perks-list">
               <!-- Input tags dynamically added here -->
             </div>
           </div>
@@ -419,6 +424,131 @@ import Layout from "../../layouts/Layout.astro";
     border-color: rgba(45, 212, 191, 0.4);
     color: #2dd4bf;
   }
+
+  /* Perks Section Styling */
+  .add-perk-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(45, 212, 191, 0.1);
+    border: 1px solid rgba(45, 212, 191, 0.35);
+    color: #2dd4bf;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s ease;
+  }
+  .add-perk-btn:hover {
+    background: rgba(45, 212, 191, 0.22);
+    border-color: #2dd4bf;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 10px rgba(45, 212, 191, 0.25);
+  }
+  .add-perk-btn .plus-icon {
+    font-size: 1rem;
+    line-height: 1;
+    font-weight: 800;
+  }
+  .perks-empty-note {
+    padding: 0.85rem 1.15rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.4);
+    text-align: center;
+    line-height: 1.5;
+  }
+  .perks-empty-note strong {
+    color: #2dd4bf;
+  }
+  .perks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  /* Dynamically Injected Perks Row & Input Styles */
+  :global(#perksList .perk-row) {
+    display: flex;
+    gap: 0.65rem;
+    align-items: center;
+    animation: perkRowFade 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  @keyframes perkRowFade {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  :global(#perksList .perk-prefix) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(45, 212, 191, 0.12);
+    border: 1px solid rgba(45, 212, 191, 0.35);
+    color: #2dd4bf;
+    font-weight: 800;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    user-select: none;
+  }
+  :global(#perksList .input-field),
+  :global(#perksList .perk-input) {
+    flex: 1;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.95rem;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+  }
+  :global(#perksList .input-field:focus),
+  :global(#perksList .perk-input:focus) {
+    outline: none;
+    border-color: #2dd4bf;
+    box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.2);
+    background: rgba(255, 255, 255, 0.07);
+  }
+  :global(#perksList .input-field::placeholder),
+  :global(#perksList .perk-input::placeholder) {
+    color: rgba(255, 255, 255, 0.35);
+  }
+  :global(#perksList .remove-perk-btn) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    color: #f87171;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+  :global(#perksList .remove-perk-btn:hover) {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+    color: #ef4444;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+  }
   .url-preview-box {
     margin-top: 0.85rem;
     background: rgba(0, 0, 0, 0.3);
@@ -593,15 +723,18 @@ import Layout from "../../layouts/Layout.astro";
     letter-spacing: 0.05em;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
-  .sponsor-table td {
+  .sponsor-table td,
+  :global(.sponsor-table td) {
     padding: 1rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     vertical-align: middle;
   }
-  .sponsor-table tr:hover td {
+  .sponsor-table tr:hover td,
+  :global(.sponsor-table tr:hover td) {
     background: rgba(255, 255, 255, 0.02);
   }
-  .status-badge {
+  .status-badge,
+  :global(.status-badge) {
     display: inline-block;
     padding: 0.2rem 0.6rem;
     border-radius: 9999px;
@@ -609,12 +742,14 @@ import Layout from "../../layouts/Layout.astro";
     font-weight: 600;
     text-transform: capitalize;
   }
-  .status-pending {
+  .status-pending,
+  :global(.status-pending) {
     background: rgba(245, 158, 11, 0.15);
     color: #fbbf24;
     border: 1px solid rgba(245, 158, 11, 0.3);
   }
-  .status-paid {
+  .status-paid,
+  :global(.status-paid) {
     background: rgba(45, 212, 191, 0.15);
     color: #2dd4bf;
     border: 1px solid rgba(45, 212, 191, 0.3);
@@ -648,6 +783,7 @@ import Layout from "../../layouts/Layout.astro";
   const sponsorSlugInput = document.getElementById("sponsorSlug");
   const sponsorAmountInput = document.getElementById("sponsorAmount");
   const perksList = document.getElementById("perksList");
+  const perksEmptyNote = document.getElementById("perksEmptyNote");
   const addPerkBtn = document.getElementById("addPerkBtn");
   const urlPreview = document.getElementById("urlPreview");
   const createSponsorForm = document.getElementById("createSponsorForm");
@@ -656,18 +792,48 @@ import Layout from "../../layouts/Layout.astro";
   const submitText = document.getElementById("submitText");
   const formError = document.getElementById("formError");
 
+  function updatePerksEmptyState() {
+    if (!perksEmptyNote) return;
+    const count = perksList.querySelectorAll(".perk-row").length;
+    perksEmptyNote.style.display = count === 0 ? "block" : "none";
+  }
+
   function addPerkRow(initialValue = "") {
     const row = document.createElement("div");
     row.className = "perk-row";
-    row.style.cssText = "display:flex;gap:0.5rem;align-items:center;";
     row.innerHTML = `
-      <input type="text" class="input-field perk-input" placeholder="e.g. 4 VIP Executive Passes" value="${escape(initialValue)}" />
-      <button type="button" class="btn btn-sm btn-ghost remove-perk-btn" title="Remove" style="padding:0.6rem 0.85rem;color:#f87171;border-color:rgba(239,68,68,0.25);font-size:1.1rem;line-height:1;">&times;</button>
+      <span class="perk-prefix" aria-hidden="true">&#10003;</span>
+      <input
+        type="text"
+        class="input-field perk-input"
+        placeholder="e.g. 4 VIP Executive Passes at Dragon Gate"
+        value="${escape(initialValue)}"
+      />
+      <button
+        type="button"
+        class="remove-perk-btn"
+        title="Remove Entry"
+        aria-label="Remove Entry"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
     `;
+
     row.querySelector(".remove-perk-btn").addEventListener("click", () => {
       row.remove();
+      updatePerksEmptyState();
     });
+
     perksList.appendChild(row);
+    updatePerksEmptyState();
+
+    const input = row.querySelector(".perk-input");
+    if (!initialValue && input) {
+      input.focus();
+    }
   }
 
   addPerkBtn.addEventListener("click", () => addPerkRow());
@@ -895,6 +1061,7 @@ import Layout from "../../layouts/Layout.astro";
       // Reset form
       createSponsorForm.reset();
       perksList.innerHTML = "";
+      updatePerksEmptyState();
       delete sponsorSlugInput.dataset.manual;
       updateUrlPreview();
 
