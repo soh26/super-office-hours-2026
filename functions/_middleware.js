@@ -597,41 +597,6 @@ async function renderSponsorPage(context, slug, url) {
   </header>
 
   <main class="container">
-    <!-- Hero Section -->
-    <section class="hero">
-      <p class="hero-badge">
-        By
-        <img
-          class="hero-badge-logo"
-          src="/images/takeoff-tokyo-logo.png"
-          alt="Takeoff Tokyo"
-        />
-        · Asia's flagship startup conference, since 2023
-      </p>
-
-      <h1 class="hero-title">SUPER OFFICE<br />HOURS</h1>
-
-      <p class="hero-meta">
-        September 25, 2026 · Dragon Gate, Shibuya, Tokyo
-      </p>
-
-      <!-- Event Key Stats Strip -->
-      <div class="stats">
-        <div class="stat">
-          <div class="stat-value">50</div>
-          <div class="stat-label">investors</div>
-        </div>
-        <div class="stat">
-          <div class="stat-value">100</div>
-          <div class="stat-label">startups</div>
-        </div>
-        <div class="stat">
-          <div class="stat-value">400</div>
-          <div class="stat-label">meetings</div>
-        </div>
-      </div>
-    </section>
-
     <!-- Welcome Partner Banner -->
     <div class="partner-banner">
       <span class="partner-tag">Official Partner & Sponsor</span>
