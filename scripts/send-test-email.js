@@ -2,7 +2,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildConfirmationEmail, sendConfirmationEmailWithBrevo } from "../functions/lib/email.js";
+import {
+  buildConfirmationEmail,
+  sendConfirmationEmailWithBrevo,
+  buildSponsorEmail,
+  sendSponsorEmailWithBrevo,
+} from "../functions/lib/email.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
@@ -29,33 +34,47 @@ function loadDevVars() {
 async function main() {
   const env = loadDevVars();
   const args = process.argv.slice(2);
-  const toArg = args.find((a) => a.startsWith("--to="))?.replace("--to=", "") || args[0];
+  const isSponsor = args.includes("--sponsor");
+  const toArg = args.find((a) => !a.startsWith("--")) || args.find((a) => a.startsWith("--to="))?.replace("--to=", "");
   const isDryRun = args.includes("--dry-run");
 
   const apiKey = env.BREVO_API_KEY;
 
-  console.log("=== Super Office Hours — Brevo Email Test ===\n");
+  console.log(`=== Super Office Hours — ${isSponsor ? "Sponsor" : "Attendee"} Brevo Email Test ===\n`);
 
-  const samplePayload = {
-    name: "Taro Tester",
-    lineItems: [
-      { description: "Startup ticket", quantity: 1, amount_total: 2500 },
-      { description: "LP Dinner (Sep 24)", quantity: 1, amount_total: 25000 },
-    ],
-    totalAmount: 27500,
-  };
+  let textPreview = "";
 
-  const { html, text } = buildConfirmationEmail(samplePayload);
+  if (isSponsor) {
+    const samplePayload = {
+      sponsorName: "Acme Innovations Inc.",
+      contactName: "Jane Doe",
+      amount: 500000,
+      description: "Super Office Hours Partnership & Sponsorship Package",
+    };
+    const { text } = buildSponsorEmail(samplePayload);
+    textPreview = text;
+  } else {
+    const samplePayload = {
+      name: "Taro Tester",
+      lineItems: [
+        { description: "Startup ticket", quantity: 1, amount_total: 3000 },
+        { description: "LP Dinner (Sep 24)", quantity: 1, amount_total: 25000 },
+      ],
+      totalAmount: 28000,
+    };
+    const { text } = buildConfirmationEmail(samplePayload);
+    textPreview = text;
+  }
 
   console.log("Generated Plain Text Preview:");
   console.log("-----------------------------------------");
-  console.log(text);
+  console.log(textPreview);
   console.log("-----------------------------------------\n");
 
   if (isDryRun || !toArg) {
     console.log("ℹ️  Dry run completed (no email sent).");
     console.log("To send an actual test email via Brevo REST API, run:");
-    console.log("  npm run test:email -- your-email@example.com\n");
+    console.log(`  npm run test:email -- ${isSponsor ? "--sponsor " : ""}your-email@example.com\n`);
     return;
   }
 
@@ -65,14 +84,31 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`Sending confirmation email via Brevo API to ${toArg}...`);
+  console.log(`Sending ${isSponsor ? "sponsor" : "attendee"} confirmation email via Brevo API to ${toArg}...`);
   try {
-    const res = await sendConfirmationEmailWithBrevo(env, {
-      to: toArg,
-      name: samplePayload.name,
-      lineItems: samplePayload.lineItems,
-      totalAmount: samplePayload.totalAmount,
-    });
+    let res;
+    if (isSponsor) {
+      res = await sendSponsorEmailWithBrevo(env, {
+        to: toArg,
+        sponsorName: "Acme Innovations Inc.",
+        contactName: "Jane Doe",
+        amount: 500000,
+        perks: [
+          "Super Office Hours Partnership & Sponsorship Package",
+          "VIP networking with startups & investors",
+        ],
+      });
+    } else {
+      res = await sendConfirmationEmailWithBrevo(env, {
+        to: toArg,
+        name: "Taro Tester",
+        lineItems: [
+          { description: "Startup ticket", quantity: 1, amount_total: 3000 },
+          { description: "LP Dinner (Sep 24)", quantity: 1, amount_total: 25000 },
+        ],
+        totalAmount: 28000,
+      });
+    }
 
     if (res) {
       console.log("✅ Email sent successfully via Brevo!");

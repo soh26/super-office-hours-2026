@@ -1,6 +1,6 @@
 import Stripe from "stripe";
-import { sendConfirmationEmailWithBrevo } from "../lib/email.js";
-import { recordPaidRegistration } from "../lib/supabase.js";
+import { sendConfirmationEmailWithBrevo, sendSponsorEmailWithBrevo } from "../lib/email.js";
+import { recordPaidRegistration, recordPaidSponsor } from "../lib/supabase.js";
 
 export async function onRequestPost(context) {
   const { env, request } = context;
@@ -31,28 +31,46 @@ export async function onRequestPost(context) {
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
-    let lineItems = [];
-    try {
-      const itemsRes = await stripe.checkout.sessions.listLineItems(session.id, { limit: 20 });
-      lineItems = itemsRes.data || [];
-    } catch (err) {
-      console.error("Failed to fetch session line items from Stripe:", err);
-    }
+    const isSponsorCheckout = session.metadata?.type === "sponsor";
 
-    // 1. Record / update paid registration status in Supabase
-    try {
-      await recordPaidRegistration(env, session, lineItems);
-    } catch (err) {
-      console.error("Failed to record paid registration in Supabase:", err);
-    }
+    if (isSponsorCheckout) {
+      // 1. Record / update sponsor status in Supabase
+      try {
+        await recordPaidSponsor(env, session);
+      } catch (err) {
+        console.error("Failed to record paid sponsor in Supabase:", err);
+      }
 
-    // 2. Send HTML confirmation email via Brevo
-    try {
-      await sendTicketConfirmation(stripe, env, session, { lineItems });
-    } catch (err) {
-      // Don't fail the webhook over an email issue — Stripe already has the payment recorded,
-      // and a non-2xx response here would make Stripe retry the whole event indefinitely.
-      console.error("Failed to send ticket confirmation email:", err);
+      // 2. Send dedicated sponsor confirmation email via Brevo
+      try {
+        await sendSponsorConfirmation(env, session);
+      } catch (err) {
+        console.error("Failed to send sponsor confirmation email:", err);
+      }
+    } else {
+      let lineItems = [];
+      try {
+        const itemsRes = await stripe.checkout.sessions.listLineItems(session.id, { limit: 20 });
+        lineItems = itemsRes.data || [];
+      } catch (err) {
+        console.error("Failed to fetch session line items from Stripe:", err);
+      }
+
+      // 1. Record / update paid registration status in Supabase
+      try {
+        await recordPaidRegistration(env, session, lineItems);
+      } catch (err) {
+        console.error("Failed to record paid registration in Supabase:", err);
+      }
+
+      // 2. Send HTML confirmation email via Brevo
+      try {
+        await sendTicketConfirmation(stripe, env, session, { lineItems });
+      } catch (err) {
+        // Don't fail the webhook over an email issue — Stripe already has the payment recorded,
+        // and a non-2xx response here would make Stripe retry the whole event indefinitely.
+        console.error("Failed to send ticket confirmation email:", err);
+      }
     }
   }
 
@@ -83,6 +101,38 @@ export async function sendTicketConfirmation(stripe, env, session, options = {})
       name,
       lineItems: lineItemsData || [],
       totalAmount: session.amount_total,
+    },
+    fetchFn
+  );
+}
+
+export async function sendSponsorConfirmation(env, session, options = {}) {
+  const email = session.customer_details?.email || session.customer_email || session.metadata?.email;
+  if (!email) return null;
+
+  const sponsorName = session.metadata?.sponsor_name || "";
+  const contactName = session.metadata?.name || session.customer_details?.name || "";
+  const description = session.metadata?.description || "";
+  let perks = [];
+  if (session.metadata?.perks) {
+    try {
+      perks = JSON.parse(session.metadata.perks);
+    } catch {
+      perks = [];
+    }
+  }
+
+  const fetchFn = typeof options === "object" && options.fetchFn ? options.fetchFn : fetch;
+
+  return await sendSponsorEmailWithBrevo(
+    env,
+    {
+      to: email,
+      sponsorName,
+      contactName,
+      amount: session.amount_total,
+      description,
+      perks,
     },
     fetchFn
   );

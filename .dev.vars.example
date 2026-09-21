@@ -10,3 +10,6 @@ BREVO_SENDER_NAME=Super Office Hours
 # Supabase (Project URL and Service Role / Secret key for backend writes)
 SUPABASE_URL=
 SUPABASE_SECRET_KEY=
+
+# Password for /admin/sponsors link generator & API
+SPONSOR_ADMIN_PASSWORD=change-me-to-a-secure-password

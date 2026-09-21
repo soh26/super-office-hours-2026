@@ -173,9 +173,9 @@ describe("Stripe Checkout Creation & Redirects (functions/api/create-checkout.js
       assert.equal(capturedStripePayload.get("metadata[role]"), "Founder");
       assert.equal(capturedStripePayload.get("metadata[email]"), "founder@startup.io");
 
-      // Verify line items (Startup ticket x 2 @ ¥2500 each)
+      // Verify line items (Startup ticket x 2 @ ¥3000 each)
       assert.equal(capturedStripePayload.get("line_items[0][quantity]"), "2");
-      assert.equal(capturedStripePayload.get("line_items[0][price_data][unit_amount]"), "2500");
+      assert.equal(capturedStripePayload.get("line_items[0][price_data][unit_amount]"), "3000");
       assert.equal(capturedStripePayload.get("line_items[0][price_data][currency]"), "jpy");
       assert.equal(capturedStripePayload.get("line_items[0][price_data][product_data][name]"), "Startup ticket");
     } finally {

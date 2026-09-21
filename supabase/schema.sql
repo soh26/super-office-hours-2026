@@ -48,3 +48,39 @@ alter table public.registrations enable row level security;
 
 -- Policy: Allow service role (Cloudflare Functions backend) full access
 -- No public anonymous access policies are granted to protect PII
+
+-- ==========================================
+-- Sponsors Table (Custom Sponsorship Links)
+-- ==========================================
+create table if not exists public.sponsors (
+    id uuid primary key default uuid_generate_v4(),
+    name text not null,
+    slug text not null unique,
+    amount integer not null,
+    currency text not null default 'jpy',
+    description text,
+    contact_email text,
+    status text not null default 'pending' check (status in ('pending', 'paid', 'canceled', 'expired')),
+    stripe_session_id text unique,
+    stripe_payment_intent text,
+    paid_at timestamptz,
+    paid_by_name text,
+    paid_by_email text,
+    metadata jsonb default '{}'::jsonb,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+);
+
+-- Indexes for fast sponsor lookup
+create index if not exists idx_sponsors_slug on public.sponsors(slug);
+create index if not exists idx_sponsors_status on public.sponsors(status);
+
+-- Updated_at trigger for sponsors
+drop trigger if exists trigger_sponsors_updated_at on public.sponsors;
+create trigger trigger_sponsors_updated_at
+    before update on public.sponsors
+    for each row
+    execute procedure public.handle_updated_at();
+
+-- Enable RLS for sponsors table
+alter table public.sponsors enable row level security;
