@@ -3,14 +3,20 @@ import assert from "node:assert/strict";
 import { buildSponsorEmail, sendSponsorEmailWithBrevo } from "../functions/lib/email.js";
 import {
   createSponsor,
+  deletePendingSponsor,
+  getSponsorById,
   getSponsorBySlug,
   listSponsors,
   recordPaidSponsor,
+  updatePendingSponsor,
 } from "../functions/lib/supabase.js";
 import { onRequestPost as verifyPost } from "../functions/api/admin/verify.js";
 import {
+  onRequestDelete as adminSponsorsDelete,
   onRequestGet as adminSponsorsGet,
+  onRequestPatch as adminSponsorsPatch,
   onRequestPost as adminSponsorsPost,
+  onRequestPut as adminSponsorsPut,
 } from "../functions/api/admin/sponsors.js";
 import { onRequestPost as createSponsorCheckoutPost } from "../functions/api/create-sponsor-checkout.js";
 import { onRequest as middlewareHandle } from "../functions/_middleware.js";
@@ -207,6 +213,189 @@ describe("Admin Verification & Sponsor Link Generation API", () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+
+  test("admin/sponsors.js PUT updates pending sponsor and returns updated custom URL", async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async (url, options) => {
+        // Mock PATCH update
+        if (options && options.method === "PATCH") {
+          const body = JSON.parse(options.body);
+          return new Response(JSON.stringify([{ id: "sp-123", status: "pending", ...body }]), {
+            status: 200,
+          });
+        }
+        // Mock getSponsorById returning pending sponsor
+        if (url.includes("/rest/v1/sponsors?id=eq.sp-123")) {
+          return new Response(
+            JSON.stringify([
+              {
+                id: "sp-123",
+                name: "Old Name",
+                slug: "old-slug",
+                amount: 300000,
+                status: "pending",
+                metadata: { perks: [] },
+              },
+            ]),
+            { status: 200 }
+          );
+        }
+        // Mock getSponsorBySlug for new slug check
+        if (url.includes("/rest/v1/sponsors?slug=eq.new-slug")) {
+          return new Response(JSON.stringify([]), { status: 200 });
+        }
+        return new Response("Not found", { status: 404 });
+      };
+
+      const req = new Request("http://localhost:8787/api/admin/sponsors", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer secret-test-password",
+        },
+        body: JSON.stringify({
+          id: "sp-123",
+          name: "Updated Name",
+          slug: "new-slug",
+          amount: 600000,
+          perks: ["VIP Lounge Access"],
+        }),
+      });
+
+      const res = await adminSponsorsPut({ env, request: req });
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.equal(data.sponsor.name, "Updated Name");
+      assert.equal(data.sponsor.slug, "new-slug");
+      assert.equal(data.sponsor.amount, 600000);
+      assert.equal(data.url, "http://localhost:8787/thanks-new-slug");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("admin/sponsors.js PUT rejects modifying a paid sponsor", async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async (url) => {
+        if (url.includes("/rest/v1/sponsors?id=eq.sp-paid")) {
+          return new Response(
+            JSON.stringify([
+              {
+                id: "sp-paid",
+                name: "Paid Sponsor",
+                slug: "paid-slug",
+                amount: 1000000,
+                status: "paid",
+              },
+            ]),
+            { status: 200 }
+          );
+        }
+        return new Response("Not found", { status: 404 });
+      };
+
+      const req = new Request("http://localhost:8787/api/admin/sponsors", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer secret-test-password",
+        },
+        body: JSON.stringify({
+          id: "sp-paid",
+          name: "Attempted Update",
+        }),
+      });
+
+      const res = await adminSponsorsPut({ env, request: req });
+      assert.equal(res.status, 400);
+      const data = await res.json();
+      assert.match(data.error, /already been paid/i);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("admin/sponsors.js DELETE deletes a pending sponsor", async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async (url, options) => {
+        if (url.includes("/rest/v1/sponsors?id=eq.sp-del-1")) {
+          if (options && options.method === "DELETE") {
+            return new Response(JSON.stringify([{ id: "sp-del-1", status: "pending" }]), { status: 200 });
+          }
+          return new Response(
+            JSON.stringify([{ id: "sp-del-1", name: "To Delete", status: "pending" }]),
+            { status: 200 }
+          );
+        }
+        return new Response("Not found", { status: 404 });
+      };
+
+      const req = new Request("http://localhost:8787/api/admin/sponsors?id=sp-del-1", {
+        method: "DELETE",
+        headers: { Authorization: "Bearer secret-test-password" },
+      });
+
+      const res = await adminSponsorsDelete({ env, request: req });
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.equal(data.success, true);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("admin/sponsors.js DELETE rejects deleting a paid sponsor", async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async (url) => {
+        if (url.includes("/rest/v1/sponsors?id=eq.sp-paid-del")) {
+          return new Response(
+            JSON.stringify([{ id: "sp-paid-del", name: "Paid Sponsor", status: "paid" }]),
+            { status: 200 }
+          );
+        }
+        return new Response("Not found", { status: 404 });
+      };
+
+      const req = new Request("http://localhost:8787/api/admin/sponsors?id=sp-paid-del", {
+        method: "DELETE",
+        headers: { Authorization: "Bearer secret-test-password" },
+      });
+
+      const res = await adminSponsorsDelete({ env, request: req });
+      assert.equal(res.status, 400);
+      const data = await res.json();
+      assert.match(data.error, /already been paid/i);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
+describe("Supabase Sponsor CRUD Operations (functions/lib/supabase.js)", () => {
+  const env = {
+    SUPABASE_URL: "https://test.supabase.co",
+    SUPABASE_SECRET_KEY: "test-secret-key",
+  };
+
+  test("updatePendingSponsor refuses to update a paid sponsor", async () => {
+    const mockFetch = async () =>
+      new Response(JSON.stringify([{ id: "sp-1", status: "paid" }]), { status: 200 });
+    const res = await updatePendingSponsor(env, "sp-1", { name: "New Name" }, mockFetch);
+    assert.equal(res.status, 400);
+    assert.match(res.error, /already been paid/i);
+  });
+
+  test("deletePendingSponsor refuses to delete a paid sponsor", async () => {
+    const mockFetch = async () =>
+      new Response(JSON.stringify([{ id: "sp-1", status: "paid" }]), { status: 200 });
+    const res = await deletePendingSponsor(env, "sp-1", mockFetch);
+    assert.equal(res.status, 400);
+    assert.match(res.error, /already been paid/i);
   });
 });
 

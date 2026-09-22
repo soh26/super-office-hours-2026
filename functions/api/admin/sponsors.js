@@ -1,4 +1,11 @@
-import { createSponsor, getSponsorBySlug, listSponsors } from "../../lib/supabase.js";
+import {
+  createSponsor,
+  deletePendingSponsor,
+  getSponsorById,
+  getSponsorBySlug,
+  listSponsors,
+  updatePendingSponsor,
+} from "../../lib/supabase.js";
 
 function checkAdminAuth(context) {
   const adminPassword = (
@@ -117,11 +124,145 @@ export async function onRequestPost(context) {
   );
 }
 
+export async function onRequestPut(context) {
+  const authErr = checkAdminAuth(context);
+  if (authErr) return json({ error: authErr.error }, authErr.status);
+
+  let body;
+  try {
+    body = await context.request.json();
+  } catch {
+    return json({ error: "Invalid JSON" }, 400);
+  }
+
+  const id = String(body.id || "").trim();
+  if (!id) {
+    return json({ error: "Sponsor ID is required for updates" }, 400);
+  }
+
+  const existing = await getSponsorById(context.env, id);
+  if (!existing) {
+    return json({ error: "Sponsor link not found" }, 404);
+  }
+
+  if (existing.status === "paid") {
+    return json(
+      { error: "This sponsor package has already been paid. No actions are permitted on paid payments." },
+      400
+    );
+  }
+
+  const updates = {};
+
+  if (body.name !== undefined) {
+    const name = String(body.name).trim();
+    if (!name) return json({ error: "Sponsor name cannot be empty" }, 400);
+    updates.name = name;
+  }
+
+  if (body.amount !== undefined) {
+    const amount = Number(body.amount);
+    if (isNaN(amount) || amount <= 0) {
+      return json({ error: "Payment amount must be a positive number" }, 400);
+    }
+    updates.amount = Math.round(amount);
+  }
+
+  if (body.slug !== undefined) {
+    const rawSlug = String(body.slug).trim();
+    const cleanSlug = rawSlug.toLowerCase().replace(/[^a-z0-9_-]/g, "-").replace(/^-+|-+$/g, "");
+    if (!cleanSlug) {
+      return json({ error: "Invalid URL slug" }, 400);
+    }
+    if (cleanSlug !== existing.slug) {
+      const slugOwner = await getSponsorBySlug(context.env, cleanSlug);
+      if (slugOwner && slugOwner.id !== id) {
+        return json({ error: `The URL slug '${cleanSlug}' is already in use. Please choose another slug.` }, 400);
+      }
+    }
+    updates.slug = cleanSlug;
+  }
+
+  if (body.perks !== undefined || body.description !== undefined) {
+    const perks = Array.isArray(body.perks)
+      ? body.perks.map((p) => String(p || "").trim()).filter(Boolean)
+      : (body.description ? String(body.description).split("\n").map((p) => p.trim()).filter(Boolean) : []);
+    updates.description = perks.length > 0 ? perks.join("\n") : String(body.description || "").trim();
+    updates.metadata = {
+      ...(existing.metadata || {}),
+      perks,
+    };
+  }
+
+  const res = await updatePendingSponsor(context.env, id, updates);
+  if (res.error) {
+    return json({ error: res.error }, res.status || 500);
+  }
+
+  const origin = new URL(context.request.url).origin;
+  const updatedSponsor = res.data;
+  const customUrl = `${origin}/thanks-${updatedSponsor.slug}`;
+
+  return json({
+    sponsor: updatedSponsor,
+    url: customUrl,
+    message: "Sponsor link successfully updated",
+  });
+}
+
+export async function onRequestPatch(context) {
+  return onRequestPut(context);
+}
+
+export async function onRequestDelete(context) {
+  const authErr = checkAdminAuth(context);
+  if (authErr) return json({ error: authErr.error }, authErr.status);
+
+  const url = new URL(context.request.url);
+  let id = url.searchParams.get("id");
+
+  if (!id) {
+    try {
+      const body = await context.request.json();
+      id = body.id;
+    } catch {
+      // Ignored if request had no JSON body
+    }
+  }
+
+  id = String(id || "").trim();
+  if (!id) {
+    return json({ error: "Sponsor ID is required for deletion" }, 400);
+  }
+
+  const existing = await getSponsorById(context.env, id);
+  if (!existing) {
+    return json({ error: "Sponsor link not found" }, 404);
+  }
+
+  if (existing.status === "paid") {
+    return json(
+      { error: "This sponsor package has already been paid. No actions are permitted on paid payments." },
+      400
+    );
+  }
+
+  const res = await deletePendingSponsor(context.env, id);
+  if (res.error) {
+    return json({ error: res.error }, res.status || 500);
+  }
+
+  return json({
+    success: true,
+    message: "Sponsor link successfully deleted",
+  });
+}
+
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Admin-Password",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
   };
 }
 
@@ -131,3 +272,4 @@ function json(data, status = 200) {
     headers: { "Content-Type": "application/json", ...corsHeaders() },
   });
 }
+
