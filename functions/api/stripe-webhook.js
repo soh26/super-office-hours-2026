@@ -113,6 +113,10 @@ export async function sendSponsorConfirmation(env, session, options = {}) {
   const sponsorName = session.metadata?.sponsor_name || "";
   const contactName = session.metadata?.name || session.customer_details?.name || "";
   const description = session.metadata?.description || "";
+  const currency = (session.currency || session.metadata?.currency || "jpy").toLowerCase();
+  const isZeroDecimal = currency === "jpy";
+  const displayAmount = isZeroDecimal ? session.amount_total : (session.amount_total / 100);
+
   let perks = [];
   if (session.metadata?.perks) {
     try {
@@ -130,7 +134,8 @@ export async function sendSponsorConfirmation(env, session, options = {}) {
       to: email,
       sponsorName,
       contactName,
-      amount: session.amount_total,
+      amount: displayAmount,
+      currency,
       description,
       perks,
     },

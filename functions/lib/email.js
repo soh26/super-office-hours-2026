@@ -2,6 +2,18 @@ export function formatYen(amount) {
   return "¥" + Number(amount).toLocaleString("en-US");
 }
 
+export function formatCurrency(amount, currency = "jpy") {
+  const code = String(currency || "jpy").toLowerCase();
+  const num = Number(amount) || 0;
+  if (code === "usd") {
+    return "$" + num.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  } else if (code === "eur") {
+    return "€" + num.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  } else {
+    return "¥" + Math.round(num).toLocaleString("en-US");
+  }
+}
+
 export function escapeHtml(str) {
   return String(str).replace(
     /[&<>"']/g,
@@ -173,10 +185,11 @@ export async function sendConfirmationEmailWithBrevo(
 /**
  * Generates HTML and plain text for the separate Sponsor Confirmation Email.
  */
-export function buildSponsorEmail({ sponsorName, contactName, amount, description, perks }) {
+export function buildSponsorEmail({ sponsorName, contactName, amount, currency = "jpy", description, perks }) {
   const safeSponsorName = escapeHtml(sponsorName || "Valued Sponsor");
   const displayName = contactName ? escapeHtml(contactName) : safeSponsorName;
-  const formattedAmount = formatYen(amount);
+  const currCode = String(currency || "jpy").toUpperCase();
+  const formattedAmount = formatCurrency(amount, currency);
 
   const perkList = Array.isArray(perks) && perks.length > 0
     ? perks.map((p) => String(p || "").trim()).filter(Boolean)
@@ -307,7 +320,7 @@ export function buildSponsorEmail({ sponsorName, contactName, amount, descriptio
                         <tr>
                           <td style="color:#ffffff;font-weight:700;font-size:15px;">Total Paid</td>
                           <td align="right" style="color:#2dd4bf;font-weight:800;font-size:20px;text-align:right;">
-                            ${formattedAmount} <span style="font-size:11px;font-weight:600;color:rgba(45,212,191,0.8);">JPY</span>
+                            ${formattedAmount} <span style="font-size:11px;font-weight:600;color:rgba(45,212,191,0.8);">${currCode}</span>
                           </td>
                         </tr>
                       </table>
@@ -357,7 +370,7 @@ September 25, 2026 · Dragon Gate, Shibuya, Tokyo
 50 investors · 100 startups · 400 meetings
 
 Package: ${safeSponsorName} Sponsorship
-Total Paid: ${formattedAmount} JPY
+Total Paid: ${formattedAmount} ${currCode}
 ${perksText}
 Questions? Reply to this email — our partnership team is here to help.
 © 2026 TAKEOFF tokyo. All rights reserved.`;
@@ -370,7 +383,7 @@ Questions? Reply to this email — our partnership team is here to help.
  */
 export async function sendSponsorEmailWithBrevo(
   env,
-  { to, sponsorName, contactName, amount = 0, description, perks },
+  { to, sponsorName, contactName, amount = 0, currency = "jpy", description, perks },
   fetchFn = fetch
 ) {
   const apiKey = (env.BREVO_API_KEY || "").trim();
@@ -386,6 +399,7 @@ export async function sendSponsorEmailWithBrevo(
     sponsorName,
     contactName,
     amount,
+    currency,
     description,
     perks,
   });

@@ -80,6 +80,12 @@ export async function onRequestPost(context) {
     return json({ error: "Payment amount must be a positive number" }, 400);
   }
 
+  const rawCurrency = String(body.currency || "jpy").trim().toLowerCase();
+  const allowedCurrencies = ["jpy", "usd", "eur"];
+  if (!allowedCurrencies.includes(rawCurrency)) {
+    return json({ error: "Invalid currency. Supported currencies are JPY, USD, and EUR." }, 400);
+  }
+
   // Generate or clean slug
   let slug = rawSlug
     ? rawSlug.toLowerCase().replace(/[^a-z0-9_-]/g, "-").replace(/^-+|-+$/g, "")
@@ -102,6 +108,7 @@ export async function onRequestPost(context) {
     name,
     slug,
     amount: Math.round(amount),
+    currency: rawCurrency,
     description,
     contactEmail,
     status: "pending",
@@ -166,6 +173,14 @@ export async function onRequestPut(context) {
       return json({ error: "Payment amount must be a positive number" }, 400);
     }
     updates.amount = Math.round(amount);
+  }
+
+  if (body.currency !== undefined) {
+    const rawCurrency = String(body.currency).trim().toLowerCase();
+    if (!["jpy", "usd", "eur"].includes(rawCurrency)) {
+      return json({ error: "Invalid currency. Supported currencies are JPY, USD, and EUR." }, 400);
+    }
+    updates.currency = rawCurrency;
   }
 
   if (body.slug !== undefined) {

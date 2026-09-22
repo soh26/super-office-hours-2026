@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { buildSponsorEmail, sendSponsorEmailWithBrevo } from "../functions/lib/email.js";
+import { buildSponsorEmail, formatCurrency, sendSponsorEmailWithBrevo } from "../functions/lib/email.js";
 import {
   createSponsor,
   deletePendingSponsor,
@@ -637,3 +637,245 @@ describe("Sponsor Webhook Confirmation (functions/api/stripe-webhook.js)", () =>
     assert.equal(emailDispatched, true);
   });
 });
+
+describe("Multi-Currency Support for Sponsors (JPY, USD, EUR)", () => {
+  const env = {
+    SPONSOR_ADMIN_PASSWORD: "secret-test-password",
+    STRIPE_SECRET_KEY: "sk_test_currency_key",
+    SUPABASE_URL: "https://test.supabase.co",
+    SUPABASE_SECRET_KEY: "test-secret-key",
+  };
+
+  test("formatCurrency handles JPY, USD, and EUR accurately", () => {
+    assert.equal(formatCurrency(500000, "jpy"), "¥500,000");
+    assert.equal(formatCurrency(5000, "usd"), "$5,000");
+    assert.equal(formatCurrency(3500, "eur"), "€3,500");
+    // Defaults to JPY if currency not passed or empty
+    assert.equal(formatCurrency(100000), "¥100,000");
+  });
+
+  test("buildSponsorEmail renders USD and EUR currency symbols and labels", () => {
+    const usdResult = buildSponsorEmail({
+      sponsorName: "Silicon Valley Angels",
+      contactName: "David Lee",
+      amount: 10000,
+      currency: "usd",
+      perks: ["Keynote Intro"],
+    });
+    assert.match(usdResult.html, /\$10,000/);
+    assert.match(usdResult.html, /USD/);
+    assert.match(usdResult.text, /Total Paid: \$10,000 USD/);
+
+    const eurResult = buildSponsorEmail({
+      sponsorName: "Berlin Ventures",
+      contactName: "Klaus Schmidt",
+      amount: 4500,
+      currency: "eur",
+    });
+    assert.match(eurResult.html, /€4,500/);
+    assert.match(eurResult.html, /EUR/);
+    assert.match(eurResult.text, /Total Paid: €4,500 EUR/);
+  });
+
+  test("admin/sponsors.js POST validates currency and rejects unsupported currencies", async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async (url) => {
+        if (url.includes("/rest/v1/sponsors?slug=eq.global-fund")) {
+          return new Response(JSON.stringify([]), { status: 200 });
+        }
+        if (url.includes("/rest/v1/sponsors")) {
+          return new Response(JSON.stringify([{ id: "sp-usd-1", name: "Global Fund", currency: "usd" }]), {
+            status: 201,
+          });
+        }
+        return new Response("Not found", { status: 404 });
+      };
+
+      // Valid USD
+      const validReq = new Request("http://localhost:8787/api/admin/sponsors", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer secret-test-password",
+        },
+        body: JSON.stringify({
+          name: "Global Fund",
+          amount: 5000,
+          currency: "usd",
+        }),
+      });
+      const validRes = await adminSponsorsPost({ env, request: validReq });
+      assert.equal(validRes.status, 201);
+      const validData = await validRes.json();
+      assert.equal(validData.sponsor.currency, "usd");
+
+      // Invalid Currency (e.g. GBP)
+      const invalidReq = new Request("http://localhost:8787/api/admin/sponsors", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer secret-test-password",
+        },
+        body: JSON.stringify({
+          name: "British Tech",
+          amount: 5000,
+          currency: "gbp",
+        }),
+      });
+      const invalidRes = await adminSponsorsPost({ env, request: invalidReq });
+      assert.equal(invalidRes.status, 400);
+      const invalidData = await invalidRes.json();
+      assert.match(invalidData.error, /Supported currencies are JPY, USD, and EUR/i);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("create-sponsor-checkout sets Stripe unit_amount in cents for USD and EUR, unmultiplied for JPY", async () => {
+    const originalFetch = globalThis.fetch;
+    let capturedStripeParams = null;
+
+    try {
+      globalThis.fetch = async (url, options) => {
+        if (url.includes("/rest/v1/sponsors?slug=eq.usd-partner")) {
+          return new Response(
+            JSON.stringify([
+              {
+                id: "sp-usd-123",
+                name: "USD Partner",
+                slug: "usd-partner",
+                amount: 5000, // $5,000
+                currency: "usd",
+                status: "pending",
+              },
+            ]),
+            { status: 200 }
+          );
+        }
+        if (url.includes("/rest/v1/sponsors?slug=eq.eur-partner")) {
+          return new Response(
+            JSON.stringify([
+              {
+                id: "sp-eur-123",
+                name: "EUR Partner",
+                slug: "eur-partner",
+                amount: 3200, // €3,200
+                currency: "eur",
+                status: "pending",
+              },
+            ]),
+            { status: 200 }
+          );
+        }
+        if (url.includes("api.stripe.com/v1/checkout/sessions")) {
+          capturedStripeParams = new URLSearchParams(options.body);
+          return new Response(
+            JSON.stringify({ url: "https://checkout.stripe.com/pay/cs_test" }),
+            { status: 200 }
+          );
+        }
+        return new Response("Not found", { status: 404 });
+      };
+
+      // 1. USD checkout (5000 USD -> 500000 cents)
+      const usdReq = new Request("http://localhost:8787/api/create-sponsor-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug: "usd-partner",
+          name: "John Doe",
+          email: "john@usdpartner.com",
+        }),
+      });
+      const usdRes = await createSponsorCheckoutPost({ env, request: usdReq });
+      assert.equal(usdRes.status, 200);
+      assert.equal(capturedStripeParams.get("line_items[0][price_data][currency]"), "usd");
+      assert.equal(capturedStripeParams.get("line_items[0][price_data][unit_amount]"), "500000");
+      assert.equal(capturedStripeParams.get("metadata[currency]"), "usd");
+
+      // 2. EUR checkout (3200 EUR -> 320000 cents)
+      const eurReq = new Request("http://localhost:8787/api/create-sponsor-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug: "eur-partner",
+          name: "Pierre Laurent",
+          email: "pierre@eurpartner.fr",
+        }),
+      });
+      const eurRes = await createSponsorCheckoutPost({ env, request: eurReq });
+      assert.equal(eurRes.status, 200);
+      assert.equal(capturedStripeParams.get("line_items[0][price_data][currency]"), "eur");
+      assert.equal(capturedStripeParams.get("line_items[0][price_data][unit_amount]"), "320000");
+      assert.equal(capturedStripeParams.get("metadata[currency]"), "eur");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("middleware renders custom USD and EUR currency symbols on sponsor landing page", async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async (url) => {
+        if (url.includes("/rest/v1/sponsors?slug=eq.usd-global")) {
+          return new Response(
+            JSON.stringify([
+              {
+                id: "sp-usd-99",
+                name: "USD Global",
+                slug: "usd-global",
+                amount: 7500,
+                currency: "usd",
+                status: "pending",
+                description: "Executive Partner",
+              },
+            ]),
+            { status: 200 }
+          );
+        }
+        return new Response("Not found", { status: 404 });
+      };
+
+      const req = new Request("http://localhost:8787/thanks-usd-global");
+      const res = await middlewareHandle({ request: req, env, next: async () => {} });
+      assert.equal(res.status, 200);
+      const html = await res.text();
+      assert.match(html, /\$7,500/);
+      assert.match(html, /USD/);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("sendSponsorConfirmation converts USD cents from Stripe session to standard currency unit for email", async () => {
+    let capturedEmail = null;
+    const mockFetch = async (url, options) => {
+      capturedEmail = JSON.parse(options.body);
+      return new Response(JSON.stringify({ messageId: "msg_curr_123" }), { status: 200 });
+    };
+
+    const session = {
+      id: "cs_usd_123",
+      amount_total: 500000, // 500,000 cents in Stripe
+      currency: "usd",
+      customer_email: "sponsor@usd.com",
+      metadata: {
+        sponsor_name: "American Capital",
+        name: "Sarah Connor",
+      },
+    };
+
+    await sendSponsorConfirmation(
+      { ...env, BREVO_API_KEY: "test-brevo-key" },
+      session,
+      { fetchFn: mockFetch }
+    );
+    assert.ok(capturedEmail);
+    // Email should show $5,000 USD, not $500,000
+    assert.match(capturedEmail.htmlContent, /\$5,000/);
+    assert.match(capturedEmail.htmlContent, /USD/);
+    assert.match(capturedEmail.textContent, /\$5,000 USD/);
+  });
+});
+

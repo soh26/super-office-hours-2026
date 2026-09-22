@@ -74,11 +74,21 @@ import Layout from "../../layouts/Layout.astro";
             <code id="urlPreview">https://soh.takeoff-tokyo.com/thanks-acme-innovations</code>
           </div>
 
-          <div class="form-group" style="margin-top:1.25rem;">
-            <label for="sponsorAmount">Amount (JPY) <span class="req">*</span></label>
-            <div class="input-prefix-wrapper">
-              <span class="input-prefix">¥</span>
-              <input type="number" id="sponsorAmount" class="input-field with-prefix" placeholder="300000" min="50" step="1" required />
+          <div class="form-grid" style="margin-top:1.25rem;">
+            <div class="form-group">
+              <label for="sponsorCurrency">Currency <span class="req">*</span></label>
+              <select id="sponsorCurrency" class="input-field select-field">
+                <option value="jpy" selected>JPY (&#165;)</option>
+                <option value="usd">USD (&#36;)</option>
+                <option value="eur">EUR (&#8364;)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="sponsorAmount">Amount <span class="req">*</span></label>
+              <div class="input-prefix-wrapper">
+                <span class="input-prefix" id="sponsorCurrencyPrefix">¥</span>
+                <input type="number" id="sponsorAmount" class="input-field with-prefix" placeholder="300000" min="1" step="any" required />
+              </div>
             </div>
           </div>
 
@@ -133,7 +143,7 @@ import Layout from "../../layouts/Layout.astro";
               <tr>
                 <th>Sponsor Name</th>
                 <th>Custom URL</th>
-                <th>Amount (JPY)</th>
+                <th>Amount</th>
                 <th>Status</th>
                 <th>Created</th>
                 <th style="text-align:right;">Actions</th>
@@ -178,11 +188,21 @@ import Layout from "../../layouts/Layout.astro";
             <code id="editUrlPreview">https://soh.takeoff-tokyo.com/thanks-...</code>
           </div>
 
-          <div class="form-group" style="margin-top:1.25rem;">
-            <label for="editSponsorAmount">Amount (JPY) <span class="req">*</span></label>
-            <div class="input-prefix-wrapper">
-              <span class="input-prefix">¥</span>
-              <input type="number" id="editSponsorAmount" class="input-field with-prefix" min="50" step="1" required />
+          <div class="form-grid" style="margin-top:1.25rem;">
+            <div class="form-group">
+              <label for="editSponsorCurrency">Currency <span class="req">*</span></label>
+              <select id="editSponsorCurrency" class="input-field select-field">
+                <option value="jpy">JPY (¥) — Japanese Yen</option>
+                <option value="usd">USD ($) — US Dollar</option>
+                <option value="eur">EUR (€) — Euro</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editSponsorAmount">Amount <span class="req">*</span></label>
+              <div class="input-prefix-wrapper">
+                <span class="input-prefix" id="editSponsorCurrencyPrefix">¥</span>
+                <input type="number" id="editSponsorAmount" class="input-field with-prefix" min="1" step="any" required />
+              </div>
             </div>
           </div>
 
@@ -435,6 +455,20 @@ import Layout from "../../layouts/Layout.astro";
     border-color: #2dd4bf;
     box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.2);
     background: rgba(255, 255, 255, 0.07);
+  }
+  select.input-field {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.6)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1.1em;
+    padding-right: 2.5rem;
+    cursor: pointer;
+  }
+  select.input-field option {
+    background: #18181b;
+    color: #fff;
   }
   .input-prefix-wrapper {
     position: relative;
@@ -928,6 +962,8 @@ import Layout from "../../layouts/Layout.astro";
     const createSponsorForm = document.getElementById("createSponsorForm");
     const sponsorNameInput = document.getElementById("sponsorName");
     const sponsorSlugInput = document.getElementById("sponsorSlug");
+    const sponsorCurrencyInput = document.getElementById("sponsorCurrency");
+    const sponsorCurrencyPrefix = document.getElementById("sponsorCurrencyPrefix");
     const sponsorAmountInput = document.getElementById("sponsorAmount");
     const urlPreview = document.getElementById("urlPreview");
     const createPerksList = document.getElementById("createPerksList");
@@ -950,6 +986,8 @@ import Layout from "../../layouts/Layout.astro";
     const editSponsorId = document.getElementById("editSponsorId");
     const editSponsorName = document.getElementById("editSponsorName");
     const editSponsorSlug = document.getElementById("editSponsorSlug");
+    const editSponsorCurrencyInput = document.getElementById("editSponsorCurrency");
+    const editSponsorCurrencyPrefix = document.getElementById("editSponsorCurrencyPrefix");
     const editSponsorAmount = document.getElementById("editSponsorAmount");
     const editUrlPreview = document.getElementById("editUrlPreview");
     const editPerksList = document.getElementById("editPerksList");
@@ -970,6 +1008,47 @@ import Layout from "../../layouts/Layout.astro";
     let activeDeleteId = null;
 
     // Helpers
+    function getCurrencySymbol(curr) {
+      const code = String(curr || "jpy").toLowerCase();
+      if (code === "usd") return "$";
+      if (code === "eur") return "€";
+      return "¥";
+    }
+
+    function formatAmountDisplay(amount, curr) {
+      const code = String(curr || "jpy").toLowerCase();
+      const num = Number(amount || 0);
+      const symbol = getCurrencySymbol(code);
+      if (code === "jpy") {
+        return `${symbol}${Math.round(num).toLocaleString("en-US")} JPY`;
+      }
+      return `${symbol}${num.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${code.toUpperCase()}`;
+    }
+
+    if (sponsorCurrencyInput && sponsorCurrencyPrefix) {
+      sponsorCurrencyInput.addEventListener("change", () => {
+        const val = sponsorCurrencyInput.value;
+        sponsorCurrencyPrefix.textContent = getCurrencySymbol(val);
+        if (val === "jpy") {
+          sponsorAmountInput.placeholder = "300000";
+        } else {
+          sponsorAmountInput.placeholder = "2500";
+        }
+      });
+    }
+
+    if (editSponsorCurrencyInput && editSponsorCurrencyPrefix) {
+      editSponsorCurrencyInput.addEventListener("change", () => {
+        const val = editSponsorCurrencyInput.value;
+        editSponsorCurrencyPrefix.textContent = getCurrencySymbol(val);
+        if (val === "jpy") {
+          editSponsorAmount.placeholder = "300000";
+        } else {
+          editSponsorAmount.placeholder = "2500";
+        }
+      });
+    }
+
     function escapeHtml(str) {
       return String(str || "").replace(/[&<>"']/g, (c) => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
@@ -1177,7 +1256,7 @@ import Layout from "../../layouts/Layout.astro";
           const url = s.url || `${origin}/thanks-${s.slug}`;
           const isPaid = s.status === "paid";
           const statusClass = isPaid ? "status-paid" : "status-pending";
-          const formattedAmount = "¥" + Number(s.amount || 0).toLocaleString();
+          const formattedAmount = formatAmountDisplay(s.amount, s.currency);
           const dateStr = s.created_at ? new Date(s.created_at).toLocaleDateString() : "-";
 
           let actionsHtml = "";
@@ -1233,6 +1312,16 @@ import Layout from "../../layouts/Layout.astro";
       editSponsorSlug.value = sponsor.slug || "";
       editSponsorSlug.dataset.manual = "true";
       editSponsorAmount.value = sponsor.amount || "";
+      if (editSponsorCurrencyInput) {
+        const curr = (sponsor.currency || "jpy").toLowerCase();
+        editSponsorCurrencyInput.value = curr;
+        if (editSponsorCurrencyPrefix) editSponsorCurrencyPrefix.textContent = getCurrencySymbol(curr);
+        if (curr === "jpy") {
+          editSponsorAmount.placeholder = "300000";
+        } else {
+          editSponsorAmount.placeholder = "2500";
+        }
+      }
       editFormError.classList.add("hidden");
 
       updateEditUrlPreview();
@@ -1268,7 +1357,7 @@ import Layout from "../../layouts/Layout.astro";
       }
 
       activeDeleteId = sponsor.id;
-      deleteDialogDesc.innerHTML = `Are you sure you want to delete the pending sponsor link for <strong>${escapeHtml(sponsor.name)}</strong> (¥${Number(sponsor.amount || 0).toLocaleString()})? This link will no longer be accessible.`;
+      deleteDialogDesc.innerHTML = `Are you sure you want to delete the pending sponsor link for <strong>${escapeHtml(sponsor.name)}</strong> (${formatAmountDisplay(sponsor.amount, sponsor.currency)})? This link will no longer be accessible.`;
       deleteDialogError.classList.add("hidden");
 
       if (typeof deleteDialog.showModal === "function") {
@@ -1373,6 +1462,7 @@ import Layout from "../../layouts/Layout.astro";
 
       const name = sponsorNameInput.value.trim();
       const slug = slugify(sponsorSlugInput.value.trim() || name);
+      const currency = sponsorCurrencyInput ? sponsorCurrencyInput.value : "jpy";
       const amount = Number(sponsorAmountInput.value);
       const perks = Array.from(createPerksList.querySelectorAll(".perk-input"))
         .map((el) => el.value.trim())
@@ -1385,7 +1475,7 @@ import Layout from "../../layouts/Layout.astro";
             "Content-Type": "application/json",
             Authorization: `Bearer ${password}`,
           },
-          body: JSON.stringify({ name, slug, amount, perks }),
+          body: JSON.stringify({ name, slug, amount, currency, perks }),
         });
 
         const data = await res.json();
@@ -1401,6 +1491,11 @@ import Layout from "../../layouts/Layout.astro";
 
         // Reset form
         createSponsorForm.reset();
+        if (sponsorCurrencyInput) {
+          sponsorCurrencyInput.value = "jpy";
+          if (sponsorCurrencyPrefix) sponsorCurrencyPrefix.textContent = "¥";
+          sponsorAmountInput.placeholder = "300000";
+        }
         createPerksList.innerHTML = "";
         appendPerkRow("create", "");
         delete sponsorSlugInput.dataset.manual;
@@ -1438,6 +1533,7 @@ import Layout from "../../layouts/Layout.astro";
       const id = editSponsorId.value;
       const name = editSponsorName.value.trim();
       const slug = slugify(editSponsorSlug.value.trim() || name);
+      const currency = editSponsorCurrencyInput ? editSponsorCurrencyInput.value : "jpy";
       const amount = Number(editSponsorAmount.value);
       const perks = Array.from(editPerksList.querySelectorAll(".perk-input"))
         .map((input) => input.value.trim())
@@ -1450,7 +1546,7 @@ import Layout from "../../layouts/Layout.astro";
             "Content-Type": "application/json",
             Authorization: `Bearer ${password}`,
           },
-          body: JSON.stringify({ id, name, slug, amount, perks }),
+          body: JSON.stringify({ id, name, slug, amount, currency, perks }),
         });
 
         const data = await res.json();

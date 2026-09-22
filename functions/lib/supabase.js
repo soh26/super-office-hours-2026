@@ -176,7 +176,7 @@ export async function createSponsor(env, data, fetchFn = fetch) {
     name: data.name,
     slug: data.slug,
     amount: Number(data.amount),
-    currency: data.currency || "jpy",
+    currency: data.currency ? String(data.currency).trim().toLowerCase() : "jpy",
     description: data.description || null,
     contact_email: data.contactEmail || null,
     status: data.status || "pending",
@@ -368,6 +368,7 @@ export async function updatePendingSponsor(env, id, updates, fetchFn = fetch) {
   if (updates.name !== undefined) payload.name = String(updates.name).trim();
   if (updates.slug !== undefined) payload.slug = String(updates.slug).trim().toLowerCase();
   if (updates.amount !== undefined) payload.amount = Math.round(Number(updates.amount));
+  if (updates.currency !== undefined) payload.currency = String(updates.currency).trim().toLowerCase();
   if (updates.description !== undefined) payload.description = updates.description;
   if (updates.contactEmail !== undefined) payload.contact_email = updates.contactEmail;
   if (updates.metadata !== undefined) payload.metadata = updates.metadata;
