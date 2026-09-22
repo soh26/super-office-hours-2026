@@ -145,13 +145,14 @@ import Layout from "../../layouts/Layout.astro";
                 <th>Custom URL</th>
                 <th>Amount</th>
                 <th>Status</th>
+                <th>Views</th>
                 <th>Created</th>
                 <th style="text-align:right;">Actions</th>
               </tr>
             </thead>
             <tbody id="sponsorsTbody">
               <tr>
-                <td colspan="6" class="table-empty-cell">Loading sponsors...</td>
+                <td colspan="7" class="table-empty-cell">Loading sponsors...</td>
               </tr>
             </tbody>
           </table>
@@ -242,6 +243,55 @@ import Layout from "../../layouts/Layout.astro";
             <span class="spinner hidden" id="deleteSpinner"></span>
             <span id="deleteBtnText">Delete Sponsor</span>
           </button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Native HTML5 Dialog: Access Logs (Views & Geolocation) -->
+    <dialog id="viewsDialog" class="admin-dialog">
+      <div class="dialog-box logs-box">
+        <div class="dialog-header">
+          <div>
+            <h2 id="viewsDialogTitle">Access Logs</h2>
+            <p id="viewsDialogSubtitle" class="dialog-subtitle">Live link view history</p>
+          </div>
+          <button type="button" class="btn-close-dialog" data-action="close-dialog" data-dialog="viewsDialog" aria-label="Close dialog">&times;</button>
+        </div>
+
+        <div class="logs-summary-bar">
+          <div class="logs-stat">
+            <span class="logs-stat-label">Total Views</span>
+            <strong id="viewsTotalCount" class="logs-stat-val">0</strong>
+          </div>
+          <div class="logs-stat">
+            <span class="logs-stat-label">Unique Cities</span>
+            <strong id="viewsUniqueCities" class="logs-stat-val">0</strong>
+          </div>
+          <div class="logs-stat">
+            <span class="logs-stat-label">Latest Access</span>
+            <strong id="viewsLastAccessed" class="logs-stat-val">-</strong>
+          </div>
+        </div>
+
+        <div class="logs-table-wrapper">
+          <table class="logs-table">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>City / Location</th>
+              </tr>
+            </thead>
+            <tbody id="viewsTbody">
+              <tr>
+                <td colspan="2" class="table-empty-cell">Loading view logs...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="dialog-actions" style="justify-content:space-between;align-items:center;">
+          <button type="button" id="refreshViewsBtn" class="btn btn-ghost btn-sm">Refresh Logs</button>
+          <button type="button" class="btn btn-secondary" data-action="close-dialog" data-dialog="viewsDialog">Close</button>
         </div>
       </div>
     </dialog>
@@ -929,6 +979,106 @@ import Layout from "../../layouts/Layout.astro";
     margin: 0.75rem 0 1.25rem 0;
   }
 
+  /* Access Logs Modal & Badges */
+  .logs-box {
+    max-width: 620px;
+  }
+  .dialog-subtitle {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.45);
+    margin: 0;
+  }
+  .logs-summary-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    text-align: center;
+  }
+  .logs-stat-label {
+    display: block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 0.2rem;
+  }
+  .logs-stat-val {
+    font-size: 1.15rem;
+    color: #2dd4bf;
+    font-weight: 700;
+  }
+  .logs-table-wrapper {
+    max-height: 320px;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.25);
+  }
+  .logs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+  .logs-table th {
+    position: sticky;
+    top: 0;
+    background: #18181f;
+    padding: 0.65rem 0.9rem;
+    text-align: left;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.45);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 1;
+  }
+  :global(.logs-table td) {
+    padding: 0.75rem 0.9rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    vertical-align: middle;
+  }
+  :global(.logs-table tr:last-child td) {
+    border-bottom: none;
+  }
+  :global(.log-time-relative) {
+    display: inline-block;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.4);
+    margin-left: 0.4rem;
+  }
+  :global(.badge-views-active) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(45, 212, 191, 0.12);
+    border: 1px solid rgba(45, 212, 191, 0.3);
+    color: #2dd4bf;
+    padding: 0.25rem 0.65rem;
+    border-radius: 9999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s ease;
+  }
+  :global(.badge-views-active:hover) {
+    background: rgba(45, 212, 191, 0.25);
+    border-color: #2dd4bf;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(45, 212, 191, 0.25);
+  }
+  :global(.badge-views-zero) {
+    display: inline-block;
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 0.8rem;
+    padding: 0.2rem 0.4rem;
+  }
+
   /* Utility */
   .hidden {
     display: none !important;
@@ -1003,11 +1153,35 @@ import Layout from "../../layouts/Layout.astro";
     const deleteSpinner = document.getElementById("deleteSpinner");
     const deleteBtnText = document.getElementById("deleteBtnText");
 
+    const viewsDialog = document.getElementById("viewsDialog");
+    const viewsDialogTitle = document.getElementById("viewsDialogTitle");
+    const viewsDialogSubtitle = document.getElementById("viewsDialogSubtitle");
+    const viewsTotalCount = document.getElementById("viewsTotalCount");
+    const viewsUniqueCities = document.getElementById("viewsUniqueCities");
+    const viewsLastAccessed = document.getElementById("viewsLastAccessed");
+    const viewsTbody = document.getElementById("viewsTbody");
+    const refreshViewsBtn = document.getElementById("refreshViewsBtn");
+    let activeViewsSponsorId = null;
+
     // In-memory data store
     let sponsorsCache = [];
     let activeDeleteId = null;
 
     // Helpers
+    function formatRelativeTime(date) {
+      const now = new Date();
+      const diffMs = now - date;
+      const diffSec = Math.floor(diffMs / 1000);
+      if (diffSec < 60) return "just now";
+      const diffMin = Math.floor(diffSec / 60);
+      if (diffMin < 60) return `${diffMin}m ago`;
+      const diffHour = Math.floor(diffMin / 60);
+      if (diffHour < 24) return `${diffHour}h ago`;
+      const diffDay = Math.floor(diffHour / 24);
+      if (diffDay < 30) return `${diffDay}d ago`;
+      return date.toLocaleDateString();
+    }
+
     function getCurrencySymbol(curr) {
       const code = String(curr || "jpy").toLowerCase();
       if (code === "usd") return "$";
@@ -1246,7 +1420,7 @@ import Layout from "../../layouts/Layout.astro";
 
         if (sponsors.length === 0) {
           sponsorsTbody.innerHTML = `
-            <tr><td colspan="6" class="table-empty-cell">No sponsor links created yet. Use the form above to generate one!</td></tr>
+            <tr><td colspan="7" class="table-empty-cell">No sponsor links created yet. Use the form above to generate one!</td></tr>
           `;
           return;
         }
@@ -1259,17 +1433,27 @@ import Layout from "../../layouts/Layout.astro";
           const formattedAmount = formatAmountDisplay(s.amount, s.currency);
           const dateStr = s.created_at ? new Date(s.created_at).toLocaleDateString() : "-";
 
+          const viewsCount = Number(s.view_count) || (Array.isArray(s.views) ? s.views.length : 0);
+          const viewsLabel = viewsCount === 1 ? "1 view" : `${viewsCount} views`;
+          const viewsHtml = viewsCount > 0
+            ? `<button type="button" class="badge-views-active" data-action="open-views" data-id="${escapeHtml(s.id)}" title="Click to view access logs">👁️ ${viewsLabel}</button>`
+            : `<button type="button" class="badge-views-zero" data-action="open-views" data-id="${escapeHtml(s.id)}" style="background:none;border:none;cursor:pointer;" title="View access logs">0 views</button>`;
+
           let actionsHtml = "";
           if (isPaid) {
             actionsHtml = `
-              <span class="action-locked-badge" title="Payment completed. No actions are permitted on paid sponsors.">
-                🔒 No actions
-              </span>
+              <div class="action-btn-group">
+                <button type="button" class="btn btn-sm btn-secondary" data-action="open-views" data-id="${escapeHtml(s.id)}" title="View Access Logs">Logs</button>
+                <span class="action-locked-badge" title="Payment completed. Edit/Delete actions are locked for paid sponsors.">
+                  🔒 Paid
+                </span>
+              </div>
             `;
           } else {
             actionsHtml = `
               <div class="action-btn-group">
                 <button type="button" class="btn btn-sm btn-secondary" data-action="copy-link" data-url="${escapeHtml(url)}" title="Copy Link">Copy</button>
+                <button type="button" class="btn btn-sm btn-secondary" data-action="open-views" data-id="${escapeHtml(s.id)}" title="View Access Logs">Logs</button>
                 <button type="button" class="btn btn-sm btn-secondary" data-action="open-edit" data-id="${escapeHtml(s.id)}" title="Edit Pending Sponsor">Edit</button>
                 <button type="button" class="btn btn-sm btn-danger" data-action="open-delete" data-id="${escapeHtml(s.id)}" title="Delete Pending Sponsor">Delete</button>
               </div>
@@ -1282,6 +1466,7 @@ import Layout from "../../layouts/Layout.astro";
               <td><a href="${escapeHtml(url)}" target="_blank" style="color:#2dd4bf;text-decoration:none;font-family:monospace;font-size:0.85rem;">/thanks-${escapeHtml(s.slug)}</a></td>
               <td><strong style="color:#fff;">${formattedAmount}</strong></td>
               <td><span class="status-badge ${statusClass}">${isPaid ? "Paid ✓" : "Pending"}</span></td>
+              <td>${viewsHtml}</td>
               <td style="color:rgba(255,255,255,0.5);font-size:0.85rem;">${dateStr}</td>
               <td style="text-align:right;">${actionsHtml}</td>
             </tr>
@@ -1289,9 +1474,112 @@ import Layout from "../../layouts/Layout.astro";
         }).join("");
       } catch (err) {
         sponsorsTbody.innerHTML = `
-          <tr><td colspan="6" class="table-empty-cell" style="color:#f87171;">Failed to load sponsors: ${escapeHtml(err.message)}</td></tr>
+          <tr><td colspan="7" class="table-empty-cell" style="color:#f87171;">Failed to load sponsors: ${escapeHtml(err.message)}</td></tr>
         `;
       }
+    }
+
+    // Modal Operations: Access Logs
+    async function openViewsModal(id) {
+      const sponsor = sponsorsCache.find((s) => String(s.id) === String(id));
+      if (!sponsor) {
+        alert("Sponsor not found.");
+        return;
+      }
+
+      activeViewsSponsorId = sponsor.id;
+      viewsDialogTitle.textContent = `Access Logs: ${sponsor.name}`;
+      viewsDialogSubtitle.textContent = `Live views for /thanks-${sponsor.slug}`;
+
+      renderViewsList(sponsor.views || [], Number(sponsor.view_count) || (sponsor.views?.length || 0));
+
+      if (typeof viewsDialog.showModal === "function") {
+        viewsDialog.showModal();
+      } else {
+        viewsDialog.setAttribute("open", "");
+      }
+
+      fetchSponsorLogs(sponsor.id);
+    }
+
+    function renderViewsList(views, totalCount) {
+      const total = totalCount || (views ? views.length : 0);
+      viewsTotalCount.textContent = total;
+
+      const safeViews = Array.isArray(views) ? views : [];
+      const cities = new Set(safeViews.map((v) => v.city).filter((c) => c && c !== "Unknown"));
+      viewsUniqueCities.textContent = cities.size;
+
+      if (safeViews.length === 0) {
+        viewsLastAccessed.textContent = "-";
+        viewsTbody.innerHTML = `
+          <tr>
+            <td colspan="2" class="table-empty-cell" style="padding:2rem 1rem;">
+              No views recorded yet for this sponsor link.<br/>
+              When a user accesses the link, their timestamp and city will appear here automatically.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      const latestDate = new Date(safeViews[0].timestamp);
+      viewsLastAccessed.textContent = !isNaN(latestDate.getTime()) ? formatRelativeTime(latestDate) : "-";
+
+      viewsTbody.innerHTML = safeViews.map((v) => {
+        const d = new Date(v.timestamp);
+        const formattedDate = isNaN(d.getTime()) ? (v.timestamp || "-") : d.toLocaleString();
+        const rel = isNaN(d.getTime()) ? "" : formatRelativeTime(d);
+        const cityStr = v.city || "Unknown";
+        const locationStr = v.country ? `${cityStr}, ${v.country}` : cityStr;
+
+        return `
+          <tr>
+            <td>
+              <strong style="color:#fff;">${escapeHtml(formattedDate)}</strong>
+              ${rel ? `<span class="log-time-relative">(${escapeHtml(rel)})</span>` : ""}
+            </td>
+            <td>
+              <span style="color:#2dd4bf;margin-right:0.35rem;">📍</span>
+              <strong style="color:${cityStr === "Unknown" ? "rgba(255,255,255,0.45)" : "#fff"};">${escapeHtml(locationStr)}</strong>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    async function fetchSponsorLogs(id) {
+      const password = getStoredPassword();
+      if (!password) return;
+
+      try {
+        const res = await fetch(getApiUrl(`/api/admin/sponsors?logs=${encodeURIComponent(id)}`), {
+          headers: { Authorization: `Bearer ${password}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.views)) {
+            const sp = sponsorsCache.find((s) => String(s.id) === String(id));
+            if (sp) {
+              sp.views = data.views;
+              if (data.views.length > (sp.view_count || 0)) {
+                sp.view_count = data.views.length;
+              }
+            }
+            renderViewsList(data.views, sp ? sp.view_count : data.views.length);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to fetch fresh sponsor logs:", err.message);
+      }
+    }
+
+    if (refreshViewsBtn) {
+      refreshViewsBtn.addEventListener("click", () => {
+        if (activeViewsSponsorId) {
+          fetchSponsorLogs(activeViewsSponsorId);
+        }
+      });
     }
 
     // Modal Operations
@@ -1375,6 +1663,7 @@ import Layout from "../../layouts/Layout.astro";
         dialogEl.removeAttribute("open");
       }
       if (dialogEl === deleteDialog) activeDeleteId = null;
+      if (dialogEl === viewsDialog) activeViewsSponsorId = null;
     }
 
     // Global Click Delegation (Handles All Actions Robustly)
@@ -1407,6 +1696,15 @@ import Layout from "../../layouts/Layout.astro";
             setTimeout(() => { copyBtn.textContent = orig; }, 2000);
           });
         }
+        return;
+      }
+
+      // Open Views Modal
+      const viewsBtn = e.target.closest('[data-action="open-views"]');
+      if (viewsBtn) {
+        e.preventDefault();
+        const id = viewsBtn.getAttribute("data-id");
+        if (id) openViewsModal(id);
         return;
       }
 
@@ -1445,6 +1743,9 @@ import Layout from "../../layouts/Layout.astro";
     });
     deleteDialog.addEventListener("click", (e) => {
       if (e.target === deleteDialog) closeDialog(deleteDialog);
+    });
+    viewsDialog.addEventListener("click", (e) => {
+      if (e.target === viewsDialog) closeDialog(viewsDialog);
     });
 
     // Create Sponsor Form Submit

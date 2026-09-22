@@ -1,4 +1,4 @@
-import { getSponsorBySlug } from "./lib/supabase.js";
+import { getSponsorBySlug, recordSponsorView } from "./lib/supabase.js";
 import { formatCurrency, escapeHtml } from "./lib/email.js";
 
 export async function onRequest(context) {
@@ -41,6 +41,31 @@ async function renderSponsorPage(context, slug, url) {
       status: 404,
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
+  }
+
+  // Collect access log: timestamp & city (from Cloudflare cf object or headers)
+  const timestamp = new Date().toISOString();
+  const cf = context.request.cf || {};
+  const city = (cf.city || context.request.headers.get("cf-ipcity") || context.request.headers.get("x-city") || "Unknown").trim();
+  const country = (cf.country || context.request.headers.get("cf-ipcountry") || context.request.headers.get("x-country") || "").trim();
+  const userAgent = context.request.headers.get("user-agent") || "";
+
+  const logPromise = recordSponsorView(context.env, {
+    sponsor,
+    sponsorId: sponsor.id,
+    slug: sponsor.slug,
+    city,
+    country,
+    timestamp,
+    userAgent,
+  }).catch((err) => {
+    console.warn("[SponsorView] Error recording access log:", err.message);
+  });
+
+  if (context.waitUntil) {
+    context.waitUntil(logPromise);
+  } else {
+    await logPromise;
   }
 
   const isAlreadyPaid = sponsor.status === "paid" || isPaidParam;

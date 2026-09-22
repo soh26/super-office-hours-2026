@@ -3,6 +3,7 @@ import {
   deletePendingSponsor,
   getSponsorById,
   getSponsorBySlug,
+  getSponsorViews,
   listSponsors,
   updatePendingSponsor,
 } from "../../lib/supabase.js";
@@ -41,12 +42,21 @@ export async function onRequestGet(context) {
   const authErr = checkAdminAuth(context);
   if (authErr) return json({ error: authErr.error }, authErr.status);
 
+  const url = new URL(context.request.url);
+  const logsTarget = url.searchParams.get("logs") || (url.searchParams.has("views") ? url.searchParams.get("id") : null);
+  if (logsTarget) {
+    const views = await getSponsorViews(context.env, logsTarget);
+    return json({ views });
+  }
+
   const sponsors = await listSponsors(context.env);
-  const origin = new URL(context.request.url).origin;
+  const origin = url.origin;
 
   const sponsorsWithUrls = sponsors.map((s) => ({
     ...s,
     url: `${origin}/thanks-${s.slug}`,
+    view_count: Number(s.metadata?.view_count) || (Array.isArray(s.metadata?.views) ? s.metadata.views.length : 0),
+    views: Array.isArray(s.metadata?.views) ? s.metadata.views : [],
   }));
 
   return json({ sponsors: sponsorsWithUrls });

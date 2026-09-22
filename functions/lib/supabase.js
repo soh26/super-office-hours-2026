@@ -440,3 +440,148 @@ export async function deletePendingSponsor(env, id, fetchFn = fetch) {
   }
 }
 
+/**
+ * Records an access log / view for a sponsor link.
+ * Collects timestamp and city (and country if available).
+ * Stores in sponsor_views table and updates sponsor metadata.
+ */
+export async function recordSponsorView(
+  env,
+  { sponsor, sponsorId, slug, city, country, timestamp, userAgent },
+  fetchFn = fetch
+) {
+  const config = getSupabaseConfig(env);
+  const now = timestamp || new Date().toISOString();
+  const cleanCity = (city && String(city).trim()) || "Unknown";
+  const cleanCountry = (country && String(country).trim()) || null;
+  const cleanSlug = String(slug || (sponsor && sponsor.slug) || "").trim().toLowerCase();
+  const targetId = sponsorId || (sponsor && sponsor.id) || null;
+
+  // 1. Structured log
+  console.log(
+    `[SponsorAccessLog] ${JSON.stringify({
+      slug: cleanSlug,
+      city: cleanCity,
+      country: cleanCountry,
+      timestamp: now,
+    })}`
+  );
+
+  if (!config) return { success: false, reason: "no_config" };
+
+  // 2. Insert into sponsor_views table
+  try {
+    const logPayload = {
+      sponsor_id: targetId,
+      sponsor_slug: cleanSlug,
+      city: cleanCity,
+      country: cleanCountry,
+      viewed_at: now,
+      user_agent: userAgent || null,
+    };
+
+    await fetchFn(`${config.url}/rest/v1/sponsor_views`, {
+      method: "POST",
+      headers: getHeaders(config.key),
+      body: JSON.stringify(logPayload),
+    });
+  } catch {
+    // Non-fatal if table not yet created
+  }
+
+  // 3. Keep views in sponsor metadata for instant retrieval
+  try {
+    let targetSponsor = sponsor;
+    if (!targetSponsor && targetId) {
+      targetSponsor = await getSponsorById(env, targetId, fetchFn);
+    } else if (!targetSponsor && cleanSlug) {
+      targetSponsor = await getSponsorBySlug(env, cleanSlug, fetchFn);
+    }
+
+    if (targetSponsor && targetSponsor.id) {
+      const currentMetadata = targetSponsor.metadata || {};
+      const existingViews = Array.isArray(currentMetadata.views) ? currentMetadata.views : [];
+      const updatedViews = [
+        {
+          timestamp: now,
+          city: cleanCity,
+          country: cleanCountry,
+        },
+        ...existingViews,
+      ].slice(0, 100);
+
+      const updatedCount = (Number(currentMetadata.view_count) || existingViews.length) + 1;
+
+      const newMetadata = {
+        ...currentMetadata,
+        view_count: updatedCount,
+        views: updatedViews,
+      };
+
+      await fetchFn(
+        `${config.url}/rest/v1/sponsors?id=eq.${encodeURIComponent(targetSponsor.id)}`,
+        {
+          method: "PATCH",
+          headers: getHeaders(config.key),
+          body: JSON.stringify({ metadata: newMetadata }),
+        }
+      );
+    }
+  } catch (err) {
+    console.warn("[Supabase] Failed to update sponsor views metadata:", err.message);
+  }
+
+  return { success: true, timestamp: now, city: cleanCity, country: cleanCountry };
+}
+
+/**
+ * Retrieves access logs / views for a sponsor link.
+ */
+export async function getSponsorViews(env, sponsorIdOrSlug, fetchFn = fetch) {
+  const config = getSupabaseConfig(env);
+  if (!config) return [];
+
+  const clean = encodeURIComponent(String(sponsorIdOrSlug).trim().toLowerCase());
+
+  // 1. Try querying from sponsor_views table
+  try {
+    const res = await fetchFn(
+      `${config.url}/rest/v1/sponsor_views?or=(sponsor_id.eq.${clean},sponsor_slug.eq.${clean})&order=viewed_at.desc&limit=200`,
+      {
+        method: "GET",
+        headers: getHeaders(config.key),
+      }
+    );
+
+    if (res.ok) {
+      const rows = await res.json();
+      if (Array.isArray(rows) && rows.length > 0) {
+        return rows.map((r) => ({
+          timestamp: r.viewed_at,
+          city: r.city || "Unknown",
+          country: r.country || null,
+        }));
+      }
+    }
+  } catch {
+    // Fallback to metadata
+  }
+
+  // 2. Fallback to sponsor metadata.views
+  try {
+    let sponsor = await getSponsorById(env, sponsorIdOrSlug, fetchFn);
+    if (!sponsor) {
+      sponsor = await getSponsorBySlug(env, sponsorIdOrSlug, fetchFn);
+    }
+
+    if (sponsor && sponsor.metadata && Array.isArray(sponsor.metadata.views)) {
+      return sponsor.metadata.views;
+    }
+  } catch {
+    // return empty
+  }
+
+  return [];
+}
+
+
