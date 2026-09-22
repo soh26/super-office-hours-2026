@@ -6,8 +6,10 @@ import {
   deletePendingSponsor,
   getSponsorById,
   getSponsorBySlug,
+  getSponsorViews,
   listSponsors,
   recordPaidSponsor,
+  recordSponsorView,
   updatePendingSponsor,
 } from "../functions/lib/supabase.js";
 import { onRequestPost as verifyPost } from "../functions/api/admin/verify.js";
@@ -878,4 +880,277 @@ describe("Multi-Currency Support for Sponsors (JPY, USD, EUR)", () => {
     assert.match(capturedEmail.textContent, /\$5,000 USD/);
   });
 });
+
+describe("Sponsor Access Logs & Geolocation (Timestamp & City)", () => {
+  const env = {
+    SPONSOR_ADMIN_PASSWORD: "secret-test-password",
+    SUPABASE_URL: "https://test.supabase.co",
+    SUPABASE_SECRET_KEY: "test-secret-key",
+  };
+
+  test("recordSponsorView stores timestamp and city in database and updates metadata", async () => {
+    let capturedViewsPost = null;
+    let capturedSponsorPatch = null;
+
+    const mockFetch = async (url, options) => {
+      if (url.includes("/rest/v1/sponsor_views")) {
+        capturedViewsPost = JSON.parse(options.body);
+        return new Response(JSON.stringify([{ id: "view-1" }]), { status: 201 });
+      }
+      if (url.includes("/rest/v1/sponsors?id=eq.sp-geo-1")) {
+        capturedSponsorPatch = JSON.parse(options.body);
+        return new Response(JSON.stringify([{ id: "sp-geo-1" }]), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    };
+
+    const mockSponsor = {
+      id: "sp-geo-1",
+      slug: "geo-sponsor",
+      metadata: {
+        view_count: 2,
+        views: [{ timestamp: "2026-09-22T08:00:00Z", city: "Yokohama", country: "JP" }],
+      },
+    };
+
+    const result = await recordSponsorView(
+      env,
+      {
+        sponsor: mockSponsor,
+        sponsorId: "sp-geo-1",
+        slug: "geo-sponsor",
+        city: "Tokyo",
+        country: "JP",
+        timestamp: "2026-09-22T09:00:00Z",
+      },
+      mockFetch
+    );
+
+    assert.equal(result.success, true);
+    assert.equal(result.city, "Tokyo");
+    assert.equal(result.timestamp, "2026-09-22T09:00:00Z");
+
+    // Verify insert into sponsor_views table
+    assert.ok(capturedViewsPost);
+    assert.equal(capturedViewsPost.sponsor_id, "sp-geo-1");
+    assert.equal(capturedViewsPost.sponsor_slug, "geo-sponsor");
+    assert.equal(capturedViewsPost.city, "Tokyo");
+    assert.equal(capturedViewsPost.country, "JP");
+    assert.equal(capturedViewsPost.viewed_at, "2026-09-22T09:00:00Z");
+
+    // Verify metadata update in sponsors table
+    assert.ok(capturedSponsorPatch);
+    assert.equal(capturedSponsorPatch.metadata.view_count, 3);
+    assert.equal(capturedSponsorPatch.metadata.views.length, 2);
+    assert.equal(capturedSponsorPatch.metadata.views[0].city, "Tokyo");
+    assert.equal(capturedSponsorPatch.metadata.views[0].timestamp, "2026-09-22T09:00:00Z");
+  });
+
+  test("getSponsorViews retrieves logs from sponsor_views or metadata fallback", async () => {
+    // 1. From sponsor_views table
+    const mockFetchTable = async (url) => {
+      if (url.includes("/rest/v1/sponsor_views")) {
+        return new Response(
+          JSON.stringify([
+            { viewed_at: "2026-09-22T10:00:00Z", city: "Shibuya", country: "JP" },
+            { viewed_at: "2026-09-22T09:30:00Z", city: "Osaka", country: "JP" },
+          ]),
+          { status: 200 }
+        );
+      }
+      return new Response("Not found", { status: 404 });
+    };
+
+    const tableViews = await getSponsorViews(env, "shibuya-partner", mockFetchTable);
+    assert.equal(tableViews.length, 2);
+    assert.equal(tableViews[0].city, "Shibuya");
+    assert.equal(tableViews[0].timestamp, "2026-09-22T10:00:00Z");
+
+    // 2. Fallback to sponsor.metadata.views when sponsor_views table returns 404
+    const mockFetchFallback = async (url) => {
+      if (url.includes("/rest/v1/sponsor_views")) {
+        return new Response("Not found", { status: 404 });
+      }
+      if (url.includes("/rest/v1/sponsors?slug=eq.fallback-partner")) {
+        return new Response(
+          JSON.stringify([
+            {
+              id: "sp-fb",
+              slug: "fallback-partner",
+              metadata: {
+                views: [{ timestamp: "2026-09-22T07:15:00Z", city: "Nagoya", country: "JP" }],
+              },
+            },
+          ]),
+          { status: 200 }
+        );
+      }
+      return new Response("Not found", { status: 404 });
+    };
+
+    const fallbackViews = await getSponsorViews(env, "fallback-partner", mockFetchFallback);
+    assert.equal(fallbackViews.length, 1);
+    assert.equal(fallbackViews[0].city, "Nagoya");
+  });
+
+  test("middleware intercepts sponsor link and logs city from Cloudflare cf object", async () => {
+    const originalFetch = globalThis.fetch;
+    let loggedCity = null;
+
+    try {
+      globalThis.fetch = async (url, options) => {
+        if (url.includes("/rest/v1/sponsors?slug=eq.cf-geo-test")) {
+          return new Response(
+            JSON.stringify([
+              {
+                id: "sp-cf-1",
+                name: "CF Geo Partner",
+                slug: "cf-geo-test",
+                amount: 250000,
+                status: "pending",
+                metadata: {},
+              },
+            ]),
+            { status: 200 }
+          );
+        }
+        if (url.includes("/rest/v1/sponsor_views")) {
+          const body = JSON.parse(options.body);
+          loggedCity = body.city;
+          return new Response(JSON.stringify([{ id: "v-1" }]), { status: 201 });
+        }
+        if (url.includes("/rest/v1/sponsors?id=eq.sp-cf-1")) {
+          return new Response(JSON.stringify([{ id: "sp-cf-1" }]), { status: 200 });
+        }
+        return new Response("Not found", { status: 404 });
+      };
+
+      const req = new Request("http://localhost:8787/thanks-cf-geo-test");
+      const context = {
+        request: req,
+        env,
+        next: async () => {},
+      };
+      // Cloudflare cf object with city
+      context.request.cf = { city: "Kyoto", country: "JP" };
+
+      const res = await middlewareHandle(context);
+      assert.equal(res.status, 200);
+      assert.equal(loggedCity, "Kyoto");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("middleware falls back to cf-ipcity header if cf object is not present", async () => {
+    const originalFetch = globalThis.fetch;
+    let loggedCity = null;
+
+    try {
+      globalThis.fetch = async (url, options) => {
+        if (url.includes("/rest/v1/sponsors?slug=eq.header-geo-test")) {
+          return new Response(
+            JSON.stringify([
+              {
+                id: "sp-header-1",
+                name: "Header Geo Partner",
+                slug: "header-geo-test",
+                amount: 300000,
+                status: "pending",
+                metadata: {},
+              },
+            ]),
+            { status: 200 }
+          );
+        }
+        if (url.includes("/rest/v1/sponsor_views")) {
+          const body = JSON.parse(options.body);
+          loggedCity = body.city;
+          return new Response(JSON.stringify([{ id: "v-2" }]), { status: 201 });
+        }
+        if (url.includes("/rest/v1/sponsors?id=eq.sp-header-1")) {
+          return new Response(JSON.stringify([{ id: "sp-header-1" }]), { status: 200 });
+        }
+        return new Response("Not found", { status: 404 });
+      };
+
+      const req = new Request("http://localhost:8787/thanks-header-geo-test", {
+        headers: {
+          "cf-ipcity": "San Francisco",
+          "cf-ipcountry": "US",
+        },
+      });
+
+      const res = await middlewareHandle({ request: req, env, next: async () => {} });
+      assert.equal(res.status, 200);
+      assert.equal(loggedCity, "San Francisco");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("admin/sponsors.js GET returns view_count and views in list, and handles ?logs= query", async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async (url) => {
+        // List sponsors
+        if (url.includes("/rest/v1/sponsors?order=created_at.desc")) {
+          return new Response(
+            JSON.stringify([
+              {
+                id: "sp-logs-1",
+                name: "Logged Partner",
+                slug: "logged-partner",
+                amount: 500000,
+                currency: "jpy",
+                status: "pending",
+                metadata: {
+                  view_count: 5,
+                  views: [{ timestamp: "2026-09-22T12:00:00Z", city: "Tokyo", country: "JP" }],
+                },
+              },
+            ]),
+            { status: 200 }
+          );
+        }
+        // Specific logs query
+        if (url.includes("/rest/v1/sponsor_views")) {
+          return new Response(
+            JSON.stringify([
+              { viewed_at: "2026-09-22T12:00:00Z", city: "Tokyo", country: "JP" },
+              { viewed_at: "2026-09-22T11:00:00Z", city: "Osaka", country: "JP" },
+            ]),
+            { status: 200 }
+          );
+        }
+        return new Response("Not found", { status: 404 });
+      };
+
+      // 1. List sponsors includes view_count and views
+      const listReq = new Request("http://localhost:8787/api/admin/sponsors", {
+        headers: { Authorization: "Bearer secret-test-password" },
+      });
+      const listRes = await adminSponsorsGet({ env, request: listReq });
+      assert.equal(listRes.status, 200);
+      const listData = await listRes.json();
+      assert.equal(listData.sponsors[0].view_count, 5);
+      assert.equal(listData.sponsors[0].views.length, 1);
+      assert.equal(listData.sponsors[0].views[0].city, "Tokyo");
+
+      // 2. Query logs specifically
+      const logsReq = new Request("http://localhost:8787/api/admin/sponsors?logs=sp-logs-1", {
+        headers: { Authorization: "Bearer secret-test-password" },
+      });
+      const logsRes = await adminSponsorsGet({ env, request: logsReq });
+      assert.equal(logsRes.status, 200);
+      const logsData = await logsRes.json();
+      assert.equal(logsData.views.length, 2);
+      assert.equal(logsData.views[0].city, "Tokyo");
+      assert.equal(logsData.views[1].city, "Osaka");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
 

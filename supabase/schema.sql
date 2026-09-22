@@ -84,3 +84,21 @@ create trigger trigger_sponsors_updated_at
 
 -- Enable RLS for sponsors table
 alter table public.sponsors enable row level security;
+
+-- ==========================================
+-- Sponsor Views / Access Logs Table
+-- ==========================================
+create table if not exists public.sponsor_views (
+    id uuid primary key default uuid_generate_v4(),
+    sponsor_id uuid references public.sponsors(id) on delete cascade,
+    sponsor_slug text not null,
+    city text default 'Unknown',
+    country text,
+    viewed_at timestamptz not null default now(),
+    user_agent text
+);
+
+create index if not exists idx_sponsor_views_slug on public.sponsor_views(sponsor_slug);
+create index if not exists idx_sponsor_views_viewed_at on public.sponsor_views(viewed_at desc);
+
+alter table public.sponsor_views enable row level security;
