@@ -1,5 +1,5 @@
 import { getSponsorBySlug } from "./lib/supabase.js";
-import { formatYen, escapeHtml } from "./lib/email.js";
+import { formatCurrency, escapeHtml } from "./lib/email.js";
 
 export async function onRequest(context) {
   const url = new URL(context.request.url);
@@ -50,7 +50,8 @@ async function renderSponsorPage(context, slug, url) {
     ? sponsor.metadata.perks.map((p) => String(p || "").trim()).filter(Boolean)
     : (sponsor.description ? String(sponsor.description).split("\n").map((p) => p.trim()).filter(Boolean) : []);
   const safeDesc = escapeHtml(sponsor.description || `${safeName} Sponsorship`);
-  const formattedAmount = formatYen(sponsor.amount);
+  const currencyCode = (sponsor.currency || "jpy").toUpperCase();
+  const formattedAmount = formatCurrency(sponsor.amount, sponsor.currency);
 
   const perksHtml = explicitPerks.length > 0
     ? `<ul>${explicitPerks.map((perk) => `<li>${escapeHtml(perk)}</li>`).join("")}</ul>`
@@ -620,7 +621,7 @@ async function renderSponsorPage(context, slug, url) {
                </div>
                <div class="summary-row">
                  <span class="summary-label">Amount Paid</span>
-                 <span class="summary-val" style="color:var(--accent); font-weight:700;">${formattedAmount} JPY</span>
+                 <span class="summary-val" style="color:var(--accent); font-weight:700;">${formattedAmount} ${currencyCode}</span>
                </div>
                <div class="summary-row">
                  <span class="summary-label">Payment Status</span>
@@ -638,7 +639,7 @@ async function renderSponsorPage(context, slug, url) {
 
              <div class="ticket-price-strip">
                <span class="price-label">Your Payment</span>
-               <div class="price">${formattedAmount}<span>JPY</span></div>
+               <div class="price">${formattedAmount}<span>${currencyCode}</span></div>
              </div>
 
              ${perksHtml}

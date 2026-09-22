@@ -55,6 +55,12 @@ export async function onRequestPost(context) {
     ? sponsor.metadata.perks
     : (Array.isArray(body.perks) ? body.perks : []);
 
+  const currency = (sponsor.currency || "jpy").toLowerCase();
+  const isZeroDecimal = currency === "jpy";
+  const unitAmount = isZeroDecimal
+    ? Math.round(Number(sponsor.amount))
+    : Math.round(Number(sponsor.amount) * 100);
+
   const formParams = {
     mode: "payment",
     customer_email: email,
@@ -64,12 +70,13 @@ export async function onRequestPost(context) {
     "metadata[sponsor_id]": sponsor.id || "",
     "metadata[sponsor_slug]": sponsor.slug,
     "metadata[sponsor_name]": sponsor.name,
+    "metadata[currency]": currency,
     "metadata[description]": description,
     "metadata[name]": name,
     "metadata[email]": email,
     "line_items[0][quantity]": "1",
-    "line_items[0][price_data][currency]": "jpy",
-    "line_items[0][price_data][unit_amount]": String(sponsor.amount),
+    "line_items[0][price_data][currency]": currency,
+    "line_items[0][price_data][unit_amount]": String(unitAmount),
     "line_items[0][price_data][product_data][name]": `${sponsor.name} — Super Office Hours Sponsorship`,
   };
 
