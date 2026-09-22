@@ -54,9 +54,7 @@ import Layout from "../../layouts/Layout.astro";
       <!-- Create Sponsor Card -->
       <section class="card form-card">
         <div class="card-head">
-          <span class="card-step">Step 1</span>
           <h2>New Sponsor Link</h2>
-          <p class="card-subtitle">Generate a dedicated payment link for an agreed sponsorship tier.</p>
         </div>
 
         <form id="createSponsorForm">
@@ -72,7 +70,7 @@ import Layout from "../../layouts/Layout.astro";
           </div>
 
           <div class="url-preview-banner">
-            <span class="url-preview-label">Live Link Preview:</span>
+            <span class="url-preview-label">Live Link:</span>
             <code id="urlPreview">https://soh.takeoff-tokyo.com/thanks-acme-innovations</code>
           </div>
 
@@ -86,18 +84,10 @@ import Layout from "../../layouts/Layout.astro";
 
           <!-- Explicit Perks List -->
           <div class="form-group" style="margin-top:1.5rem;">
-            <div class="section-label-row">
-              <label style="margin:0;">Package Description</label>
-              <button type="button" class="btn-add-entry" data-action="add-perk" data-target="create">
-                <span>+</span> Add Entry
-              </button>
-            </div>
-            <span class="field-hint">
-              Enter each addon/perk as an explicit entry.
+            <label style="margin-bottom:0.25rem;">Package Description</label>
+            <span class="field-hint" style="margin-top:0;margin-bottom:0.75rem;">
+              Press Enter to add the next entry.
             </span>
-            <div id="createPerksEmpty" class="perks-empty-note">
-              No custom perks added. Click <strong>+ Add Entry</strong> to specify inclusions, or leave empty for no addons.
-            </div>
             <div id="createPerksList" class="perks-list"></div>
           </div>
 
@@ -184,7 +174,7 @@ import Layout from "../../layouts/Layout.astro";
           </div>
 
           <div class="url-preview-banner">
-            <span class="url-preview-label">Live Link Preview:</span>
+            <span class="url-preview-label">Live Link:</span>
             <code id="editUrlPreview">https://soh.takeoff-tokyo.com/thanks-...</code>
           </div>
 
@@ -197,16 +187,10 @@ import Layout from "../../layouts/Layout.astro";
           </div>
 
           <div class="form-group" style="margin-top:1.5rem;">
-            <div class="section-label-row">
-              <label style="margin:0;">Package Description</label>
-              <button type="button" class="btn-add-entry" data-action="add-perk" data-target="edit">
-                <span>+</span> Add Entry
-              </button>
-            </div>
-            <span class="field-hint">Enter each addon/perk as an explicit entry.</span>
-            <div id="editPerksEmpty" class="perks-empty-note">
-              No custom perks added. Click <strong>+ Add Entry</strong> to specify inclusions, or leave empty for no addons.
-            </div>
+            <label style="margin-bottom:0.25rem;">Package Description</label>
+            <span class="field-hint" style="margin-top:0;margin-bottom:0.75rem;">
+              Press Enter to add the next entry.
+            </span>
             <div id="editPerksList" class="perks-list"></div>
           </div>
 
@@ -947,7 +931,6 @@ import Layout from "../../layouts/Layout.astro";
     const sponsorAmountInput = document.getElementById("sponsorAmount");
     const urlPreview = document.getElementById("urlPreview");
     const createPerksList = document.getElementById("createPerksList");
-    const createPerksEmpty = document.getElementById("createPerksEmpty");
     const createSubmitBtn = document.getElementById("createSubmitBtn");
     const createSpinner = document.getElementById("createSpinner");
     const createText = document.getElementById("createText");
@@ -970,7 +953,6 @@ import Layout from "../../layouts/Layout.astro";
     const editSponsorAmount = document.getElementById("editSponsorAmount");
     const editUrlPreview = document.getElementById("editUrlPreview");
     const editPerksList = document.getElementById("editPerksList");
-    const editPerksEmpty = document.getElementById("editPerksEmpty");
     const editFormError = document.getElementById("editFormError");
     const saveEditBtn = document.getElementById("saveEditBtn");
     const editSpinner = document.getElementById("editSpinner");
@@ -1032,19 +1014,8 @@ import Layout from "../../layouts/Layout.astro";
     }
 
     // Perks Dynamic Rows Helpers
-    function updatePerksEmptyNote(listEl, emptyEl) {
-      if (!listEl || !emptyEl) return;
-      const count = listEl.querySelectorAll(".perk-row").length;
-      if (count === 0) {
-        emptyEl.classList.remove("hidden");
-      } else {
-        emptyEl.classList.add("hidden");
-      }
-    }
-
-    function appendPerkRow(target, initialValue = "") {
+    function appendPerkRow(target, initialValue = "", insertAfterRow = null) {
       const listEl = target === "edit" ? editPerksList : createPerksList;
-      const emptyEl = target === "edit" ? editPerksEmpty : createPerksEmpty;
       if (!listEl) return;
 
       const row = document.createElement("div");
@@ -1066,21 +1037,37 @@ import Layout from "../../layouts/Layout.astro";
         >&times;</button>
       `;
 
-      listEl.appendChild(row);
-      updatePerksEmptyNote(listEl, emptyEl);
+      if (insertAfterRow && insertAfterRow.nextElementSibling) {
+        listEl.insertBefore(row, insertAfterRow.nextElementSibling);
+      } else {
+        listEl.appendChild(row);
+      }
 
       const input = row.querySelector(".perk-input");
       if (input) {
         input.addEventListener("keydown", (e) => {
           if (e.key === "Enter") {
             e.preventDefault();
-            appendPerkRow(target);
+            appendPerkRow(target, "", row);
+          } else if (e.key === "Backspace" && !input.value) {
+            const rows = listEl.querySelectorAll(".perk-row");
+            if (rows.length > 1) {
+              e.preventDefault();
+              const prevRow = row.previousElementSibling || row.nextElementSibling;
+              row.remove();
+              if (prevRow) {
+                const prevInput = prevRow.querySelector(".perk-input");
+                if (prevInput) prevInput.focus();
+              }
+            }
           }
         });
         if (!initialValue) {
           input.focus();
         }
       }
+
+      return row;
     }
 
     // Live URL Preview helpers
@@ -1255,8 +1242,11 @@ import Layout from "../../layouts/Layout.astro";
         ? sponsor.metadata.perks
         : (sponsor.description ? sponsor.description.split("\n").map((p) => p.trim()).filter(Boolean) : []);
 
-      perks.forEach((p) => appendPerkRow("edit", p));
-      updatePerksEmptyNote(editPerksList, editPerksEmpty);
+      if (perks.length > 0) {
+        perks.forEach((p) => appendPerkRow("edit", p));
+      } else {
+        appendPerkRow("edit", "");
+      }
 
       if (typeof editDialog.showModal === "function") {
         editDialog.showModal();
@@ -1300,15 +1290,6 @@ import Layout from "../../layouts/Layout.astro";
 
     // Global Click Delegation (Handles All Actions Robustly)
     document.addEventListener("click", (e) => {
-      // Add Perk Row
-      const addBtn = e.target.closest('[data-action="add-perk"]');
-      if (addBtn) {
-        e.preventDefault();
-        const target = addBtn.getAttribute("data-target") || "create";
-        appendPerkRow(target);
-        return;
-      }
-
       // Remove Perk Row
       const removeBtn = e.target.closest('[data-action="remove-perk"]');
       if (removeBtn) {
@@ -1316,11 +1297,10 @@ import Layout from "../../layouts/Layout.astro";
         const row = removeBtn.closest(".perk-row");
         if (row) {
           const parentList = row.parentElement;
+          const target = parentList === editPerksList ? "edit" : "create";
           row.remove();
-          if (parentList === editPerksList) {
-            updatePerksEmptyNote(editPerksList, editPerksEmpty);
-          } else {
-            updatePerksEmptyNote(createPerksList, createPerksEmpty);
+          if (parentList.querySelectorAll(".perk-row").length === 0) {
+            appendPerkRow(target, "");
           }
         }
         return;
@@ -1422,7 +1402,7 @@ import Layout from "../../layouts/Layout.astro";
         // Reset form
         createSponsorForm.reset();
         createPerksList.innerHTML = "";
-        updatePerksEmptyNote(createPerksList, createPerksEmpty);
+        appendPerkRow("create", "");
         delete sponsorSlugInput.dataset.manual;
         updateCreateUrlPreview();
 
@@ -1522,6 +1502,9 @@ import Layout from "../../layouts/Layout.astro";
         deleteBtnText.textContent = "Delete Sponsor";
       }
     });
+
+    // Initialize initial empty perk row
+    appendPerkRow("create", "");
 
     // Auto-login if password cached in session
     if (getStoredPassword()) {
