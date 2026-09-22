@@ -4,25 +4,25 @@ import Layout from "../../layouts/Layout.astro";
 
 <Layout title="Sponsor Link Management — Super Office Hours">
   <div class="admin-wrapper">
-    <!-- Top Navigation -->
+    <!-- Top Navigation Header -->
     <header class="admin-header">
-      <div class="admin-header-inner">
-        <a href="/" class="admin-logo" aria-label="Takeoff Tokyo — home">
+      <div class="header-inner">
+        <a href="/" class="header-brand" aria-label="Takeoff Tokyo home">
           <img src="/images/takeoff-tokyo-logo.png" alt="Takeoff Tokyo" height="26" style="height:26px;width:auto;" />
-          <span class="admin-tag">Admin</span>
+          <span class="badge-admin">Admin</span>
         </a>
-        <div id="authActions" style="display:none;">
-          <button id="logoutBtn" class="btn btn-ghost">Lock Dashboard</button>
+        <div id="authActions" class="hidden">
+          <button type="button" id="logoutBtn" class="btn btn-ghost btn-sm">Lock Dashboard</button>
         </div>
       </div>
     </header>
 
-    <!-- 1. Password Lock Overlay (Shown when unauthenticated) -->
-    <div id="lockView" class="auth-center">
+    <!-- 1. Password Lock View -->
+    <div id="lockView" class="auth-wrapper">
       <div class="auth-card">
         <div class="auth-icon">🔒</div>
         <h2>Organizer Access</h2>
-        <p class="auth-desc">Enter the sponsor administration password to manage custom sponsor payment links.</p>
+        <p class="auth-desc">Enter the sponsor administration password to manage custom sponsor checkout links.</p>
 
         <form id="loginForm">
           <div class="form-group">
@@ -31,64 +31,48 @@ import Layout from "../../layouts/Layout.astro";
               type="password"
               id="adminPassword"
               class="input-field"
-              placeholder="Enter password"
+              placeholder="Enter admin password"
               autocomplete="current-password"
               required
             />
           </div>
-          <div id="authError" class="alert-error" style="display:none;"></div>
-          <button type="submit" id="unlockBtn" class="btn btn-primary" style="width:100%;margin-top:1.25rem;">
+          <div id="authError" class="alert-error hidden"></div>
+          <button type="submit" id="unlockBtn" class="btn btn-primary btn-block" style="margin-top:1.25rem;">
             Unlock Dashboard &rarr;
           </button>
         </form>
       </div>
     </div>
 
-    <!-- 2. Admin Dashboard (Revealed after successful password verification) -->
-    <main id="dashboardView" class="dashboard-container" style="display:none;">
-      <div class="dashboard-head">
-        <div>
-          <h1>Custom Sponsor Checkouts</h1>
-          <p class="text-muted">Create tailored Stripe links for sponsors.</p>
-        </div>
+    <!-- 2. Main Admin Dashboard -->
+    <main id="dashboardView" class="dashboard-wrapper hidden">
+      <div class="dashboard-header">
+        <h1>Custom Sponsor Checkouts</h1>
+        <p class="text-muted">Create tailored Stripe checkout links.</p>
       </div>
 
-      <!-- Link Creation Form Card -->
+      <!-- Create Sponsor Card -->
       <section class="card form-card">
-        <div class="card-header">
-          <div class="card-badge">Step 1</div>
+        <div class="card-head">
+          <span class="card-step">Step 1</span>
           <h2>New Sponsor Link</h2>
-          <p class="card-subtitle">Each sponsor receives a dedicated checkout URL with their agreed sponsorship amount.</p>
+          <p class="card-subtitle">Generate a dedicated payment link for an agreed sponsorship tier.</p>
         </div>
 
-        <form id="createSponsorForm" class="create-form">
-          <div class="grid-2">
+        <form id="createSponsorForm">
+          <div class="form-grid">
             <div class="form-group">
-              <label for="sponsorName">Company Name <span class="req">*</span></label>
-              <input
-                type="text"
-                id="sponsorName"
-                class="input-field"
-                placeholder="e.g. Acme Innovations Inc."
-                required
-              />
+              <label for="sponsorName">Sponsor Name <span class="req">*</span></label>
+              <input type="text" id="sponsorName" class="input-field" placeholder="e.g. Acme Innovations Inc." required />
             </div>
-
             <div class="form-group">
               <label for="sponsorSlug">Custom URL Slug <span class="req">*</span></label>
-              <input
-                type="text"
-                id="sponsorSlug"
-                class="input-field"
-                placeholder="e.g. acme-innovations"
-                required
-              />
+              <input type="text" id="sponsorSlug" class="input-field" placeholder="e.g. acme-innovations" required />
             </div>
           </div>
 
-          <!-- Live URL Preview -->
-          <div class="url-preview-box">
-            <span class="url-preview-label">Generated Sponsor URL:</span>
+          <div class="url-preview-banner">
+            <span class="url-preview-label">Live Link Preview:</span>
             <code id="urlPreview">https://soh.takeoff-tokyo.com/thanks-acme-innovations</code>
           </div>
 
@@ -96,59 +80,49 @@ import Layout from "../../layouts/Layout.astro";
             <label for="sponsorAmount">Amount (JPY) <span class="req">*</span></label>
             <div class="input-prefix-wrapper">
               <span class="input-prefix">¥</span>
-              <input
-                type="number"
-                id="sponsorAmount"
-                class="input-field with-prefix"
-                placeholder="300000"
-                min="50"
-                step="1"
-                required
-              />
+              <input type="number" id="sponsorAmount" class="input-field with-prefix" placeholder="300000" min="50" step="1" required />
             </div>
           </div>
 
-          <!-- Package / Invoice Description (Explicit Entries Only) -->
+          <!-- Explicit Perks List -->
           <div class="form-group" style="margin-top:1.5rem;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
-              <label style="margin-bottom:0;">Package Description</label>
-              <button type="button" id="addPerkBtn" class="add-perk-btn">
-                <span class="plus-icon">+</span> Add Entry
+            <div class="section-label-row">
+              <label style="margin:0;">Package Description</label>
+              <button type="button" class="btn-add-entry" data-action="add-perk" data-target="create">
+                <span>+</span> Add Entry
               </button>
             </div>
-            <span class="field-hint" style="margin-top:0;margin-bottom:0.75rem;">
+            <span class="field-hint">
               Enter each addon/perk as an explicit entry.
             </span>
-            <div id="perksEmptyNote" class="perks-empty-note">
+            <div id="createPerksEmpty" class="perks-empty-note">
               No custom perks added. Click <strong>+ Add Entry</strong> to specify inclusions, or leave empty for no addons.
             </div>
-            <div id="perksList" class="perks-list">
-              <!-- Input tags dynamically added here -->
-            </div>
+            <div id="createPerksList" class="perks-list"></div>
           </div>
 
-          <div id="formError" class="alert-error" style="display:none;margin-top:1rem;"></div>
+          <div id="createFormError" class="alert-error hidden" style="margin-top:1rem;"></div>
 
           <div class="form-actions">
-            <button type="submit" id="submitBtn" class="btn btn-accent">
-              <span id="submitSpinner" class="spinner" style="display:none;"></span>
-              <span id="submitText">Generate Custom Sponsor Link &rarr;</span>
+            <button type="submit" id="createSubmitBtn" class="btn btn-accent">
+              <span class="spinner hidden" id="createSpinner"></span>
+              <span id="createText">Generate Custom Sponsor Link &rarr;</span>
             </button>
           </div>
         </form>
       </section>
 
-      <!-- Success Notification Box (Populated after link creation) -->
-      <section id="createdAlert" class="card success-banner" style="display:none;">
+      <!-- Success Notification Box -->
+      <section id="createdBanner" class="card success-banner hidden" style="margin-top:1.5rem;">
         <div class="success-banner-inner">
-          <div class="success-icon">✓</div>
+          <div class="success-icon">&#10003;</div>
           <div class="success-content">
-            <h3>Sponsor Link Created!</h3>
-            <p>Send this custom link directly to the sponsor representative:</p>
+            <h3>Custom Sponsor Link Created!</h3>
+            <p>Send this link directly to the sponsor representative:</p>
             <div class="copy-url-row">
               <input type="text" id="createdUrlInput" class="input-field copy-field" readonly />
-              <button type="button" id="copyUrlBtn" class="btn btn-secondary">Copy Link</button>
-              <a id="testUrlLink" href="#" target="_blank" class="btn btn-ghost">Open Page &nearr;</a>
+              <button type="button" id="copyCreatedUrlBtn" class="btn btn-secondary">Copy Link</button>
+              <a id="testCreatedUrlLink" href="#" target="_blank" class="btn btn-ghost">Open Page &nearr;</a>
             </div>
           </div>
         </div>
@@ -160,7 +134,7 @@ import Layout from "../../layouts/Layout.astro";
           <div>
             <h2>Track Existing Sponsor Links</h2>
           </div>
-          <button type="button" id="refreshBtn" class="btn btn-sm btn-ghost">Refresh List</button>
+          <button type="button" id="refreshBtn" class="btn btn-ghost btn-sm">Refresh List</button>
         </div>
 
         <div class="table-responsive">
@@ -170,16 +144,14 @@ import Layout from "../../layouts/Layout.astro";
                 <th>Sponsor Name</th>
                 <th>Custom URL</th>
                 <th>Amount (JPY)</th>
-                <th>Payment Status</th>
+                <th>Status</th>
                 <th>Created</th>
                 <th style="text-align:right;">Actions</th>
               </tr>
             </thead>
             <tbody id="sponsorsTbody">
               <tr>
-                <td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">
-                  Loading sponsors...
-                </td>
+                <td colspan="6" class="table-empty-cell">Loading sponsors...</td>
               </tr>
             </tbody>
           </table>
@@ -187,48 +159,32 @@ import Layout from "../../layouts/Layout.astro";
       </section>
     </main>
 
-    <!-- Edit Pending Sponsor Modal -->
-    <div id="editModal" class="modal-overlay" style="display:none;">
-      <div class="modal-card">
-        <div class="modal-header">
+    <!-- Native HTML5 Dialog: Edit Pending Sponsor -->
+    <dialog id="editDialog" class="admin-dialog">
+      <div class="dialog-box">
+        <div class="dialog-header">
           <div>
-            <div class="card-badge">Edit Pending Sponsor</div>
-            <h2 id="editModalTitle">Edit Sponsor Link</h2>
-            <p class="card-subtitle" style="margin-bottom:0;">Update package details for this pending sponsorship.</p>
+            <h2>Update Sponsor Link</h2>
           </div>
-          <button type="button" id="closeEditModalBtn" class="close-modal-btn" aria-label="Close modal">&times;</button>
+          <button type="button" class="btn-close-dialog" data-action="close-dialog" data-dialog="editDialog" aria-label="Close dialog">&times;</button>
         </div>
 
-        <form id="editSponsorForm" class="create-form">
+        <form id="editSponsorForm">
           <input type="hidden" id="editSponsorId" />
 
-          <div class="grid-2">
+          <div class="form-grid">
             <div class="form-group">
-              <label for="editSponsorName">Company Name <span class="req">*</span></label>
-              <input
-                type="text"
-                id="editSponsorName"
-                class="input-field"
-                placeholder="e.g. Acme Innovations Inc."
-                required
-              />
+              <label for="editSponsorName">Sponsor Name <span class="req">*</span></label>
+              <input type="text" id="editSponsorName" class="input-field" required />
             </div>
-
             <div class="form-group">
               <label for="editSponsorSlug">Custom URL Slug <span class="req">*</span></label>
-              <input
-                type="text"
-                id="editSponsorSlug"
-                class="input-field"
-                placeholder="e.g. acme-innovations"
-                required
-              />
+              <input type="text" id="editSponsorSlug" class="input-field" required />
             </div>
           </div>
 
-          <!-- Live URL Preview -->
-          <div class="url-preview-box">
-            <span class="url-preview-label">URL Preview:</span>
+          <div class="url-preview-banner">
+            <span class="url-preview-label">Live Link Preview:</span>
             <code id="editUrlPreview">https://soh.takeoff-tokyo.com/thanks-...</code>
           </div>
 
@@ -236,88 +192,77 @@ import Layout from "../../layouts/Layout.astro";
             <label for="editSponsorAmount">Amount (JPY) <span class="req">*</span></label>
             <div class="input-prefix-wrapper">
               <span class="input-prefix">¥</span>
-              <input
-                type="number"
-                id="editSponsorAmount"
-                class="input-field with-prefix"
-                placeholder="300000"
-                min="50"
-                step="1"
-                required
-              />
+              <input type="number" id="editSponsorAmount" class="input-field with-prefix" min="50" step="1" required />
             </div>
           </div>
 
-          <!-- Package / Invoice Description (Explicit Entries Only) -->
           <div class="form-group" style="margin-top:1.5rem;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
-              <label style="margin-bottom:0;">Package Description</label>
-              <button type="button" id="editAddPerkBtn" class="add-perk-btn">
-                <span class="plus-icon">+</span> Add Entry
+            <div class="section-label-row">
+              <label style="margin:0;">Package Description</label>
+              <button type="button" class="btn-add-entry" data-action="add-perk" data-target="edit">
+                <span>+</span> Add Entry
               </button>
             </div>
-            <span class="field-hint" style="margin-top:0;margin-bottom:0.75rem;">
-              Enter each addon/perk as an explicit entry.
-            </span>
-            <div id="editPerksEmptyNote" class="perks-empty-note">
+            <span class="field-hint">Enter each addon/perk as an explicit entry.</span>
+            <div id="editPerksEmpty" class="perks-empty-note">
               No custom perks added. Click <strong>+ Add Entry</strong> to specify inclusions, or leave empty for no addons.
             </div>
-            <div id="editPerksList" class="perks-list">
-              <!-- Edit input tags dynamically added here -->
-            </div>
+            <div id="editPerksList" class="perks-list"></div>
           </div>
 
-          <div id="editFormError" class="alert-error" style="display:none;margin-top:1rem;"></div>
+          <div id="editFormError" class="alert-error hidden" style="margin-top:1rem;"></div>
 
-          <div class="modal-actions">
-            <button type="button" id="cancelEditBtn" class="btn btn-ghost">Cancel</button>
+          <div class="dialog-actions">
+            <button type="button" class="btn btn-ghost" data-action="close-dialog" data-dialog="editDialog">Cancel</button>
             <button type="submit" id="saveEditBtn" class="btn btn-accent">
-              <span id="saveEditSpinner" class="spinner" style="display:none;"></span>
-              <span id="saveEditText">Save Changes &rarr;</span>
+              <span class="spinner hidden" id="editSpinner"></span>
+              <span id="editText">Save Changes &rarr;</span>
             </button>
           </div>
         </form>
       </div>
-    </div>
+    </dialog>
 
-    <!-- Delete Confirmation Modal -->
-    <div id="deleteModal" class="modal-overlay" style="display:none;">
-      <div class="modal-card delete-card">
+    <!-- Native HTML5 Dialog: Delete Pending Sponsor Confirmation -->
+    <dialog id="deleteDialog" class="admin-dialog">
+      <div class="dialog-box delete-box">
         <div class="delete-icon">⚠️</div>
-        <h3>Delete Pending Sponsor Link</h3>
-        <p id="deleteModalDesc" style="color:rgba(255,255,255,0.7);font-size:0.9rem;line-height:1.5;margin:0.75rem 0 1.25rem 0;">
-          Are you sure you want to delete this pending sponsor link? This custom link will no longer be accessible.
+        <h3>Delete Sponsor Link</h3>
+        <p id="deleteDialogDesc" class="delete-desc">
+          Are you sure you want to delete this pending sponsor link?
         </p>
-        <div id="deleteModalError" class="alert-error" style="display:none;margin-bottom:1rem;"></div>
-        <div class="modal-actions" style="justify-content:center;">
-          <button type="button" id="cancelDeleteBtn" class="btn btn-ghost">Cancel</button>
+        <div id="deleteDialogError" class="alert-error hidden" style="margin-bottom:1rem;"></div>
+        <div class="dialog-actions" style="justify-content:center;">
+          <button type="button" class="btn btn-ghost" data-action="close-dialog" data-dialog="deleteDialog">Cancel</button>
           <button type="button" id="confirmDeleteBtn" class="btn btn-danger">
-            <span id="deleteSpinner" class="spinner" style="display:none;"></span>
-            <span id="deleteText">Delete Sponsor</span>
+            <span class="spinner hidden" id="deleteSpinner"></span>
+            <span id="deleteBtnText">Delete Sponsor</span>
           </button>
         </div>
       </div>
-    </div>
+    </dialog>
   </div>
 </Layout>
 
 <style>
+  /* Layout & Theme */
   .admin-wrapper {
     min-height: 100vh;
-    background: #0a0a0c;
+    background: #09090b;
     color: #f3f4f6;
     display: flex;
     flex-direction: column;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   }
   .admin-header {
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(10, 10, 12, 0.85);
+    background: rgba(9, 9, 11, 0.85);
     backdrop-filter: blur(12px);
     position: sticky;
     top: 0;
     z-index: 50;
   }
-  .admin-header-inner {
+  .header-inner {
     max-width: 1100px;
     margin: 0 auto;
     padding: 1rem 1.5rem;
@@ -325,17 +270,16 @@ import Layout from "../../layouts/Layout.astro";
     align-items: center;
     justify-content: space-between;
   }
-  .admin-logo {
+  .header-brand {
     font-weight: 700;
     font-size: 1.15rem;
     color: #fff;
     text-decoration: none;
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.65rem;
   }
-  .admin-logo span { color: #2dd4bf; }
-  .admin-tag {
+  .badge-admin {
     font-size: 0.7rem;
     font-weight: 700;
     background: rgba(168, 85, 247, 0.2);
@@ -348,12 +292,12 @@ import Layout from "../../layouts/Layout.astro";
   }
 
   /* Password Lock View */
-  .auth-center {
+  .auth-wrapper {
     flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2rem 1.5rem;
+    padding: 2.5rem 1.5rem;
   }
   .auth-card {
     background: #141418;
@@ -363,7 +307,7 @@ import Layout from "../../layouts/Layout.astro";
     max-width: 440px;
     width: 100%;
     text-align: center;
-    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
   }
   .auth-icon {
     font-size: 2.5rem;
@@ -382,18 +326,31 @@ import Layout from "../../layouts/Layout.astro";
     margin-bottom: 1.75rem;
   }
 
-  /* Dashboard View */
-  .dashboard-container {
+  /* Main Dashboard Container */
+  .dashboard-wrapper {
     max-width: 1100px;
     margin: 2.5rem auto;
     padding: 0 1.5rem;
     width: 100%;
+    box-sizing: border-box;
     flex: 1;
   }
-  .dashboard-head {
+  .dashboard-header {
     margin-bottom: 2rem;
   }
-  .dashboard-head h1 {
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.9rem;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 1rem;
+  }
+  .dashboard-header h1 {
     font-family: "TT Lakes Neue Expanded", "Barlow Condensed", sans-serif;
     font-weight: 900;
     font-stretch: 125%;
@@ -401,11 +358,12 @@ import Layout from "../../layouts/Layout.astro";
     text-transform: uppercase;
     letter-spacing: -0.02em;
     color: #fff;
-    margin-bottom: 0.35rem;
+    margin: 0 0 0.35rem 0;
   }
   .text-muted {
     color: rgba(255, 255, 255, 0.6);
     font-size: 0.95rem;
+    margin: 0;
   }
 
   /* Cards */
@@ -418,63 +376,72 @@ import Layout from "../../layouts/Layout.astro";
   .form-card {
     padding: 2rem;
   }
-  .card-header {
+  .card-head {
     margin-bottom: 1.75rem;
   }
-  .card-badge {
+  .card-step {
     display: inline-block;
     font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
+    letter-spacing: 0.08em;
     color: #2dd4bf;
-    letter-spacing: 0.06em;
-    margin-bottom: 0.25rem;
+    background: rgba(45, 212, 191, 0.1);
+    border: 1px solid rgba(45, 212, 191, 0.25);
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
   }
-  .card-header h2 {
+  .card-head h2 {
     font-size: 1.35rem;
-    font-weight: 700;
+    font-weight: 800;
     color: #fff;
+    margin: 0.35rem 0 0.25rem 0;
   }
   .card-subtitle {
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(255, 255, 255, 0.5);
     font-size: 0.88rem;
-    margin-top: 0.2rem;
+    margin: 0;
   }
 
-  /* Forms */
-  .grid-2 {
+  /* Form Elements */
+  .form-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 1.25rem;
   }
-  @media (max-width: 680px) {
-    .grid-2 { grid-template-columns: 1fr; }
+  @media (min-width: 640px) {
+    .form-grid {
+      grid-template-columns: 1fr 1fr;
+    }
   }
   .form-group {
     display: flex;
     flex-direction: column;
     text-align: left;
   }
-  label {
+  .form-group label {
     font-size: 0.85rem;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.9);
-    margin-bottom: 0.4rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 0.45rem;
   }
-  .req { color: #f87171; }
+  .req {
+    color: #f87171;
+  }
   .field-hint {
     font-size: 0.78rem;
     color: rgba(255, 255, 255, 0.4);
     margin-top: 0.35rem;
+    margin-bottom: 0.75rem;
   }
   .input-field {
     width: 100%;
     padding: 0.75rem 1rem;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
+    border-radius: 8px;
     color: #fff;
-    font-family: inherit;
     font-size: 0.95rem;
     box-sizing: border-box;
     transition: all 0.2s ease;
@@ -499,7 +466,11 @@ import Layout from "../../layouts/Layout.astro";
   .input-field.with-prefix {
     padding-left: 2rem;
   }
-
+  .preset-pills {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.45rem;
+  }
   .pill {
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -517,8 +488,38 @@ import Layout from "../../layouts/Layout.astro";
     color: #2dd4bf;
   }
 
-  /* Perks Section Styling */
-  .add-perk-btn {
+  /* Live Preview Box */
+  .url-preview-banner {
+    margin-top: 1rem;
+    background: rgba(45, 212, 191, 0.04);
+    border: 1px solid rgba(45, 212, 191, 0.18);
+    border-radius: 8px;
+    padding: 0.65rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .url-preview-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.5);
+  }
+  .url-preview-banner code {
+    font-family: monospace;
+    font-size: 0.88rem;
+    color: #2dd4bf;
+    word-break: break-all;
+  }
+
+  /* Explicit Perks Section */
+  .section-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.35rem;
+  }
+  .btn-add-entry {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
@@ -533,16 +534,11 @@ import Layout from "../../layouts/Layout.astro";
     font-family: inherit;
     transition: all 0.2s ease;
   }
-  .add-perk-btn:hover {
+  .btn-add-entry:hover {
     background: rgba(45, 212, 191, 0.22);
     border-color: #2dd4bf;
     transform: translateY(-1px);
     box-shadow: 0 2px 10px rgba(45, 212, 191, 0.25);
-  }
-  .add-perk-btn .plus-icon {
-    font-size: 1rem;
-    line-height: 1;
-    font-weight: 800;
   }
   .perks-empty-note {
     padding: 0.85rem 1.15rem;
@@ -561,123 +557,67 @@ import Layout from "../../layouts/Layout.astro";
     display: flex;
     flex-direction: column;
     gap: 0.65rem;
+    margin-top: 0.5rem;
   }
 
-  /* Dynamically Injected Perks Row & Input Styles */
-  :global(#perksList .perk-row),
-  :global(#editPerksList .perk-row) {
+  /* Dynamically Added Perk Row */
+  :global(.perk-row) {
     display: flex;
     gap: 0.65rem;
     align-items: center;
-    animation: perkRowFade 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
-  @keyframes perkRowFade {
-    from {
-      opacity: 0;
-      transform: translateY(-4px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  :global(#perksList .perk-prefix),
-  :global(#editPerksList .perk-prefix) {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: rgba(45, 212, 191, 0.12);
-    border: 1px solid rgba(45, 212, 191, 0.35);
+  :global(.perk-prefix) {
     color: #2dd4bf;
-    font-weight: 800;
-    font-size: 0.85rem;
-    flex-shrink: 0;
-    user-select: none;
-  }
-  :global(#perksList .input-field),
-  :global(#perksList .perk-input),
-  :global(#editPerksList .input-field),
-  :global(#editPerksList .perk-input) {
-    flex: 1;
-    width: 100%;
-    padding: 0.75rem 1rem;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    color: #fff;
-    font-family: inherit;
     font-size: 0.95rem;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+  :global(.perk-input) {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 0.65rem 0.95rem;
+    color: #fff;
+    font-size: 0.92rem;
+    font-family: inherit;
     box-sizing: border-box;
     transition: all 0.2s ease;
   }
-  :global(#perksList .input-field:focus),
-  :global(#perksList .perk-input:focus),
-  :global(#editPerksList .input-field:focus),
-  :global(#editPerksList .perk-input:focus) {
+  :global(.perk-input:focus) {
     outline: none;
     border-color: #2dd4bf;
-    box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.2);
-    background: rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.2);
   }
-  :global(#perksList .input-field::placeholder),
-  :global(#perksList .perk-input::placeholder),
-  :global(#editPerksList .input-field::placeholder),
-  :global(#editPerksList .perk-input::placeholder) {
-    color: rgba(255, 255, 255, 0.35);
-  }
-  :global(#perksList .remove-perk-btn),
-  :global(#editPerksList .remove-perk-btn) {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 42px;
-    height: 42px;
-    background: rgba(239, 68, 68, 0.08);
+  :global(.remove-perk-btn) {
+    background: transparent;
     border: 1px solid rgba(239, 68, 68, 0.25);
     color: #f87171;
-    border-radius: 10px;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
+    font-size: 1.25rem;
+    line-height: 1;
     transition: all 0.2s ease;
     flex-shrink: 0;
   }
-  :global(#perksList .remove-perk-btn:hover),
-  :global(#editPerksList .remove-perk-btn:hover) {
-    background: rgba(239, 68, 68, 0.2);
-    border-color: rgba(239, 68, 68, 0.5);
+  :global(.remove-perk-btn:hover) {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: #ef4444;
     color: #ef4444;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
   }
-  .url-preview-box {
-    margin-top: 0.85rem;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px dashed rgba(255, 255, 255, 0.15);
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  .url-preview-label {
-    color: rgba(255, 255, 255, 0.5);
-  }
-  .url-preview-box code {
-    color: #2dd4bf;
-    font-family: monospace;
-    font-size: 0.9rem;
-  }
+
+  /* Buttons */
   .form-actions {
     margin-top: 1.75rem;
     display: flex;
     justify-content: flex-end;
   }
-
-  /* Buttons */
   .btn,
   :global(.btn) {
     display: inline-flex;
@@ -693,6 +633,7 @@ import Layout from "../../layouts/Layout.astro";
     border: none;
     transition: all 0.2s ease;
     text-decoration: none;
+    box-sizing: border-box;
   }
   .btn-primary,
   :global(.btn-primary) {
@@ -716,29 +657,47 @@ import Layout from "../../layouts/Layout.astro";
   }
   .btn-secondary,
   :global(.btn-secondary) {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
     color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.14);
   }
   .btn-secondary:hover,
   :global(.btn-secondary:hover) {
-    background: rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.15);
   }
   .btn-ghost,
   :global(.btn-ghost) {
     background: transparent;
     color: rgba(255, 255, 255, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
   }
   .btn-ghost:hover,
   :global(.btn-ghost:hover) {
     color: #fff;
     border-color: rgba(255, 255, 255, 0.25);
   }
+  .btn-danger,
+  :global(.btn-danger) {
+    background: rgba(239, 68, 68, 0.12);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+  .btn-danger:hover,
+  :global(.btn-danger:hover) {
+    background: #ef4444;
+    color: #fff;
+    border-color: #ef4444;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
+  }
   .btn-sm,
   :global(.btn-sm) {
-    padding: 0.4rem 0.85rem;
+    padding: 0.38rem 0.75rem;
     font-size: 0.8rem;
+    border-radius: 8px;
+  }
+  .btn-block {
+    width: 100%;
   }
 
   /* Alerts */
@@ -752,7 +711,6 @@ import Layout from "../../layouts/Layout.astro";
     text-align: left;
   }
   .success-banner {
-    margin-top: 1.5rem;
     padding: 1.5rem 2rem;
     background: rgba(45, 212, 191, 0.08);
     border-color: rgba(45, 212, 191, 0.3);
@@ -780,12 +738,12 @@ import Layout from "../../layouts/Layout.astro";
   .success-content h3 {
     font-size: 1.15rem;
     color: #2dd4bf;
-    margin-bottom: 0.25rem;
+    margin: 0 0 0.25rem 0;
   }
   .success-content p {
     color: rgba(255, 255, 255, 0.7);
     font-size: 0.9rem;
-    margin-bottom: 0.85rem;
+    margin: 0 0 0.85rem 0;
   }
   .copy-url-row {
     display: flex;
@@ -816,6 +774,7 @@ import Layout from "../../layouts/Layout.astro";
     font-size: 1.25rem;
     font-weight: 700;
     color: #fff;
+    margin: 0 0 0.25rem 0;
   }
   .table-responsive {
     overflow-x: auto;
@@ -835,17 +794,14 @@ import Layout from "../../layouts/Layout.astro";
     letter-spacing: 0.05em;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
-  .sponsor-table td,
   :global(.sponsor-table td) {
     padding: 1rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     vertical-align: middle;
   }
-  .sponsor-table tr:hover td,
   :global(.sponsor-table tr:hover td) {
     background: rgba(255, 255, 255, 0.02);
   }
-  .status-badge,
   :global(.status-badge) {
     display: inline-block;
     padding: 0.2rem 0.6rem;
@@ -854,33 +810,16 @@ import Layout from "../../layouts/Layout.astro";
     font-weight: 600;
     text-transform: capitalize;
   }
-  .status-pending,
   :global(.status-pending) {
     background: rgba(245, 158, 11, 0.15);
     color: #fbbf24;
     border: 1px solid rgba(245, 158, 11, 0.3);
   }
-  .status-paid,
   :global(.status-paid) {
     background: rgba(45, 212, 191, 0.15);
     color: #2dd4bf;
     border: 1px solid rgba(45, 212, 191, 0.3);
   }
-  .btn-danger,
-  :global(.btn-danger) {
-    background: rgba(239, 68, 68, 0.12);
-    color: #f87171;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-  }
-  .btn-danger:hover,
-  :global(.btn-danger:hover) {
-    background: #ef4444;
-    color: #fff;
-    border-color: #ef4444;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
-  }
-  .action-btn-group,
   :global(.action-btn-group) {
     display: inline-flex;
     gap: 0.4rem;
@@ -888,7 +827,6 @@ import Layout from "../../layouts/Layout.astro";
     justify-content: flex-end;
     flex-wrap: wrap;
   }
-  .action-locked-badge,
   :global(.action-locked-badge) {
     display: inline-flex;
     align-items: center;
@@ -901,86 +839,82 @@ import Layout from "../../layouts/Layout.astro";
     border: 1px solid rgba(255, 255, 255, 0.08);
     user-select: none;
   }
-
-  /* Modal Dialogs */
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(8px);
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1.5rem;
-    animation: modalFadeIn 0.2s ease forwards;
-  }
-  @keyframes modalFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-  .modal-card {
-    background: #141418;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 20px;
-    padding: 2.25rem 2rem;
-    max-width: 580px;
-    width: 100%;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
-    animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  }
-  @keyframes modalSlideUp {
-    from { transform: translateY(12px) scale(0.98); opacity: 0; }
-    to { transform: translateY(0) scale(1); opacity: 1; }
-  }
-  .delete-card {
-    max-width: 440px;
+  .table-empty-cell,
+  :global(.table-empty-cell) {
     text-align: center;
+    padding: 2.5rem 1rem;
+    color: rgba(255, 255, 255, 0.4);
   }
-  .delete-icon {
-    font-size: 2.25rem;
-    margin-bottom: 0.75rem;
+
+  /* Native HTML5 Dialog */
+  .admin-dialog {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 20px;
+    background: #141418;
+    color: #f3f4f6;
+    max-width: 580px;
+    width: 92vw;
+    max-height: 90vh;
+    padding: 0;
+    margin: auto;
+    overflow-y: auto;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85);
   }
-  .delete-card h3 {
-    font-size: 1.35rem;
-    font-weight: 700;
-    color: #fff;
-    margin-bottom: 0.5rem;
+  .admin-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.78);
+    backdrop-filter: blur(8px);
   }
-  .modal-header {
+  .dialog-box {
+    padding: 2rem;
+  }
+  .dialog-header {
     display: flex;
-    align-items: flex-start;
     justify-content: space-between;
+    align-items: flex-start;
     margin-bottom: 1.5rem;
   }
-  .modal-header h2 {
+  .dialog-header h2 {
     font-size: 1.35rem;
     font-weight: 800;
     color: #fff;
-    margin: 0.25rem 0;
+    margin: 0.25rem 0 0.15rem 0;
   }
-  .close-modal-btn {
+  .btn-close-dialog {
     background: transparent;
     border: none;
     color: rgba(255, 255, 255, 0.5);
-    font-size: 1.6rem;
+    font-size: 1.75rem;
     line-height: 1;
     cursor: pointer;
     padding: 0.25rem;
-    transition: color 0.15s ease;
   }
-  .close-modal-btn:hover {
+  .btn-close-dialog:hover {
     color: #fff;
   }
-  .modal-actions {
+  .dialog-actions {
     margin-top: 1.75rem;
     display: flex;
     justify-content: flex-end;
     gap: 0.75rem;
   }
+  .delete-box {
+    text-align: center;
+  }
+  .delete-icon {
+    font-size: 2.25rem;
+    margin-bottom: 0.5rem;
+  }
+  .delete-desc {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    margin: 0.75rem 0 1.25rem 0;
+  }
 
+  /* Utility */
+  .hidden {
+    display: none !important;
+  }
   .spinner {
     width: 14px;
     height: 14px;
@@ -995,621 +929,603 @@ import Layout from "../../layouts/Layout.astro";
 
 <script>
   // @ts-nocheck
-  const STORAGE_KEY = "soh_admin_password";
+  (function () {
+    const STORAGE_KEY = "soh_admin_password";
 
-  // Elements
-  const lockView = document.getElementById("lockView");
-  const dashboardView = document.getElementById("dashboardView");
-  const authActions = document.getElementById("authActions");
-  const loginForm = document.getElementById("loginForm");
-  const adminPasswordInput = document.getElementById("adminPassword");
-  const authError = document.getElementById("authError");
-  const logoutBtn = document.getElementById("logoutBtn");
+    // DOM Elements
+    const lockView = document.getElementById("lockView");
+    const dashboardView = document.getElementById("dashboardView");
+    const authActions = document.getElementById("authActions");
+    const loginForm = document.getElementById("loginForm");
+    const adminPasswordInput = document.getElementById("adminPassword");
+    const authError = document.getElementById("authError");
+    const logoutBtn = document.getElementById("logoutBtn");
 
-  const sponsorNameInput = document.getElementById("sponsorName");
-  const sponsorSlugInput = document.getElementById("sponsorSlug");
-  const sponsorAmountInput = document.getElementById("sponsorAmount");
-  const perksList = document.getElementById("perksList");
-  const perksEmptyNote = document.getElementById("perksEmptyNote");
-  const addPerkBtn = document.getElementById("addPerkBtn");
-  const urlPreview = document.getElementById("urlPreview");
-  const createSponsorForm = document.getElementById("createSponsorForm");
-  const submitBtn = document.getElementById("submitBtn");
-  const submitSpinner = document.getElementById("submitSpinner");
-  const submitText = document.getElementById("submitText");
-  const formError = document.getElementById("formError");
+    const createSponsorForm = document.getElementById("createSponsorForm");
+    const sponsorNameInput = document.getElementById("sponsorName");
+    const sponsorSlugInput = document.getElementById("sponsorSlug");
+    const sponsorAmountInput = document.getElementById("sponsorAmount");
+    const urlPreview = document.getElementById("urlPreview");
+    const createPerksList = document.getElementById("createPerksList");
+    const createPerksEmpty = document.getElementById("createPerksEmpty");
+    const createSubmitBtn = document.getElementById("createSubmitBtn");
+    const createSpinner = document.getElementById("createSpinner");
+    const createText = document.getElementById("createText");
+    const createFormError = document.getElementById("createFormError");
 
-  // Edit Modal Elements
-  const editModal = document.getElementById("editModal");
-  const closeEditModalBtn = document.getElementById("closeEditModalBtn");
-  const cancelEditBtn = document.getElementById("cancelEditBtn");
-  const editSponsorForm = document.getElementById("editSponsorForm");
-  const editSponsorId = document.getElementById("editSponsorId");
-  const editSponsorName = document.getElementById("editSponsorName");
-  const editSponsorSlug = document.getElementById("editSponsorSlug");
-  const editUrlPreview = document.getElementById("editUrlPreview");
-  const editSponsorAmount = document.getElementById("editSponsorAmount");
-  const editAddPerkBtn = document.getElementById("editAddPerkBtn");
-  const editPerksList = document.getElementById("editPerksList");
-  const editPerksEmptyNote = document.getElementById("editPerksEmptyNote");
-  const editFormError = document.getElementById("editFormError");
-  const saveEditBtn = document.getElementById("saveEditBtn");
-  const saveEditSpinner = document.getElementById("saveEditSpinner");
-  const saveEditText = document.getElementById("saveEditText");
+    const createdBanner = document.getElementById("createdBanner");
+    const createdUrlInput = document.getElementById("createdUrlInput");
+    const copyCreatedUrlBtn = document.getElementById("copyCreatedUrlBtn");
+    const testCreatedUrlLink = document.getElementById("testCreatedUrlLink");
 
-  // Delete Modal Elements
-  const deleteModal = document.getElementById("deleteModal");
-  const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
-  const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
-  const deleteModalDesc = document.getElementById("deleteModalDesc");
-  const deleteModalError = document.getElementById("deleteModalError");
-  const deleteSpinner = document.getElementById("deleteSpinner");
-  const deleteText = document.getElementById("deleteText");
+    const refreshBtn = document.getElementById("refreshBtn");
+    const sponsorsTbody = document.getElementById("sponsorsTbody");
 
-  // In-memory cache & state
-  let currentSponsors = [];
-  let deletingSponsorId = null;
+    // Dialogs
+    const editDialog = document.getElementById("editDialog");
+    const editSponsorForm = document.getElementById("editSponsorForm");
+    const editSponsorId = document.getElementById("editSponsorId");
+    const editSponsorName = document.getElementById("editSponsorName");
+    const editSponsorSlug = document.getElementById("editSponsorSlug");
+    const editSponsorAmount = document.getElementById("editSponsorAmount");
+    const editUrlPreview = document.getElementById("editUrlPreview");
+    const editPerksList = document.getElementById("editPerksList");
+    const editPerksEmpty = document.getElementById("editPerksEmpty");
+    const editFormError = document.getElementById("editFormError");
+    const saveEditBtn = document.getElementById("saveEditBtn");
+    const editSpinner = document.getElementById("editSpinner");
+    const editText = document.getElementById("editText");
 
-  function updatePerksEmptyState() {
-    if (!perksEmptyNote) return;
-    const count = perksList.querySelectorAll(".perk-row").length;
-    perksEmptyNote.style.display = count === 0 ? "block" : "none";
-  }
+    const deleteDialog = document.getElementById("deleteDialog");
+    const deleteDialogDesc = document.getElementById("deleteDialogDesc");
+    const deleteDialogError = document.getElementById("deleteDialogError");
+    const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
+    const deleteSpinner = document.getElementById("deleteSpinner");
+    const deleteBtnText = document.getElementById("deleteBtnText");
 
-  function addPerkRow(initialValue = "") {
-    const row = document.createElement("div");
-    row.className = "perk-row";
-    row.innerHTML = `
-      <span class="perk-prefix" aria-hidden="true">&#10003;</span>
-      <input
-        type="text"
-        class="input-field perk-input"
-        placeholder="e.g. 4 VIP Executive Passes at Dragon Gate"
-        value="${escape(initialValue)}"
-      />
-      <button
-        type="button"
-        class="remove-perk-btn"
-        title="Remove Entry"
-        aria-label="Remove Entry"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-    `;
+    // In-memory data store
+    let sponsorsCache = [];
+    let activeDeleteId = null;
 
-    row.querySelector(".remove-perk-btn").addEventListener("click", () => {
-      row.remove();
-      updatePerksEmptyState();
-    });
-
-    perksList.appendChild(row);
-    updatePerksEmptyState();
-
-    const input = row.querySelector(".perk-input");
-    if (!initialValue && input) {
-      input.focus();
-    }
-  }
-
-  function updateEditPerksEmptyState() {
-    if (!editPerksEmptyNote) return;
-    const count = editPerksList.querySelectorAll(".perk-row").length;
-    editPerksEmptyNote.style.display = count === 0 ? "block" : "none";
-  }
-
-  function addEditPerkRow(initialValue = "") {
-    const row = document.createElement("div");
-    row.className = "perk-row";
-    row.innerHTML = `
-      <span class="perk-prefix" aria-hidden="true">&#10003;</span>
-      <input
-        type="text"
-        class="input-field perk-input"
-        placeholder="e.g. 4 VIP Executive Passes at Dragon Gate"
-        value="${escape(initialValue)}"
-      />
-      <button
-        type="button"
-        class="remove-perk-btn"
-        title="Remove Entry"
-        aria-label="Remove Entry"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-    `;
-
-    row.querySelector(".remove-perk-btn").addEventListener("click", () => {
-      row.remove();
-      updateEditPerksEmptyState();
-    });
-
-    editPerksList.appendChild(row);
-    updateEditPerksEmptyState();
-
-    const input = row.querySelector(".perk-input");
-    if (!initialValue && input) {
-      input.focus();
-    }
-  }
-
-  editAddPerkBtn.addEventListener("click", () => addEditPerkRow());
-
-  function updateEditUrlPreview() {
-    const slug = slugify(editSponsorSlug.value.trim() || editSponsorName.value.trim() || "sponsor-name");
-    const origin = window.location.origin;
-    editUrlPreview.textContent = `${origin}/thanks-${slug}`;
-  }
-
-  editSponsorName.addEventListener("input", () => {
-    if (!editSponsorSlug.dataset.manual) {
-      editSponsorSlug.value = slugify(editSponsorName.value);
-    }
-    updateEditUrlPreview();
-  });
-
-  editSponsorSlug.addEventListener("input", () => {
-    editSponsorSlug.dataset.manual = "true";
-    updateEditUrlPreview();
-  });
-
-  document.querySelectorAll("[data-edit-amount]").forEach((pill) => {
-    pill.addEventListener("click", () => {
-      editSponsorAmount.value = pill.getAttribute("data-edit-amount");
-    });
-  });
-
-  function closeEditModal() {
-    editModal.style.display = "none";
-    editFormError.style.display = "none";
-    delete editSponsorSlug.dataset.manual;
-  }
-  closeEditModalBtn.addEventListener("click", closeEditModal);
-  cancelEditBtn.addEventListener("click", closeEditModal);
-
-  function closeDeleteModal() {
-    deleteModal.style.display = "none";
-    deleteModalError.style.display = "none";
-    deletingSponsorId = null;
-  }
-  cancelDeleteBtn.addEventListener("click", closeDeleteModal);
-
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      closeEditModal();
-      closeDeleteModal();
-    }
-  });
-
-  editModal.addEventListener("click", (e) => {
-    if (e.target === editModal) closeEditModal();
-  });
-  deleteModal.addEventListener("click", (e) => {
-    if (e.target === deleteModal) closeDeleteModal();
-  });
-
-  function openEditModal(id) {
-    const sponsor = currentSponsors.find((s) => s.id === id);
-    if (!sponsor) return;
-
-    if (sponsor.status === "paid") {
-      alert("This sponsor has completed payment. No actions are permitted on paid sponsors.");
-      return;
+    // Helpers
+    function escapeHtml(str) {
+      return String(str || "").replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      })[c]);
     }
 
-    editSponsorId.value = sponsor.id;
-    editSponsorName.value = sponsor.name || "";
-    editSponsorSlug.value = sponsor.slug || "";
-    editSponsorSlug.dataset.manual = "true";
-    editSponsorAmount.value = sponsor.amount || "";
-    editFormError.style.display = "none";
-
-    updateEditUrlPreview();
-
-    // Populate perks
-    editPerksList.innerHTML = "";
-    const perks = Array.isArray(sponsor.metadata?.perks)
-      ? sponsor.metadata.perks
-      : (sponsor.description ? sponsor.description.split("\n").map((p) => p.trim()).filter(Boolean) : []);
-
-    perks.forEach((p) => addEditPerkRow(p));
-    updateEditPerksEmptyState();
-
-    editModal.style.display = "flex";
-  }
-
-  function openDeleteModal(id) {
-    const sponsor = currentSponsors.find((s) => s.id === id);
-    if (!sponsor) return;
-
-    if (sponsor.status === "paid") {
-      alert("This sponsor has completed payment. No actions are permitted on paid sponsors.");
-      return;
+    function slugify(text) {
+      return String(text || "")
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9_-]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-+|-+$/g, "");
     }
 
-    deletingSponsorId = sponsor.id;
-    deleteModalDesc.innerHTML = `Are you sure you want to delete the pending sponsor link for <strong>${escape(sponsor.name)}</strong> (¥${Number(sponsor.amount || 0).toLocaleString()})? This link will no longer be accessible.`;
-    deleteModalError.style.display = "none";
-    deleteModal.style.display = "flex";
-  }
-
-  // Edit sponsor form submit
-  editSponsorForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    editFormError.style.display = "none";
-    saveEditBtn.disabled = true;
-    saveEditSpinner.style.display = "inline-block";
-    saveEditText.textContent = "Saving Changes...";
-
-    const password = getStoredPassword();
-    const id = editSponsorId.value;
-    const name = editSponsorName.value.trim();
-    const slug = slugify(editSponsorSlug.value.trim() || name);
-    const amount = Number(editSponsorAmount.value);
-    const perks = Array.from(editPerksList.querySelectorAll(".perk-input"))
-      .map((input) => input.value.trim())
-      .filter(Boolean);
-
-    try {
-      const res = await fetch(getApiUrl("/api/admin/sponsors"), {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${password}`,
-        },
-        body: JSON.stringify({
-          id,
-          name,
-          slug,
-          amount,
-          perks,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to update sponsor link");
+    function getApiUrl(path) {
+      const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      if (isLocal && window.location.port !== "8787") {
+        return `http://${window.location.hostname}:8787${path}`;
       }
+      return path;
+    }
 
-      closeEditModal();
+    function getStoredPassword() {
+      return sessionStorage.getItem(STORAGE_KEY) || "";
+    }
+
+    function showDashboard() {
+      lockView.classList.add("hidden");
+      dashboardView.classList.remove("hidden");
+      authActions.classList.remove("hidden");
+      updateCreateUrlPreview();
       loadSponsors();
-    } catch (err) {
-      editFormError.textContent = err.message || "An error occurred";
-      editFormError.style.display = "block";
-    } finally {
-      saveEditBtn.disabled = false;
-      saveEditSpinner.style.display = "none";
-      saveEditText.textContent = "Save Changes →";
     }
-  });
 
-  // Confirm delete sponsor
-  confirmDeleteBtn.addEventListener("click", async () => {
-    if (!deletingSponsorId) return;
+    function showLock() {
+      lockView.classList.remove("hidden");
+      dashboardView.classList.add("hidden");
+      authActions.classList.add("hidden");
+      sessionStorage.removeItem(STORAGE_KEY);
+      adminPasswordInput.value = "";
+    }
 
-    confirmDeleteBtn.disabled = true;
-    deleteSpinner.style.display = "inline-block";
-    deleteText.textContent = "Deleting...";
-
-    const password = getStoredPassword();
-
-    try {
-      const res = await fetch(getApiUrl(`/api/admin/sponsors?id=${encodeURIComponent(deletingSponsorId)}`), {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${password}`,
-        },
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to delete sponsor link");
+    // Perks Dynamic Rows Helpers
+    function updatePerksEmptyNote(listEl, emptyEl) {
+      if (!listEl || !emptyEl) return;
+      const count = listEl.querySelectorAll(".perk-row").length;
+      if (count === 0) {
+        emptyEl.classList.remove("hidden");
+      } else {
+        emptyEl.classList.add("hidden");
       }
-
-      closeDeleteModal();
-      loadSponsors();
-    } catch (err) {
-      deleteModalError.textContent = err.message || "Failed to delete sponsor";
-      deleteModalError.style.display = "block";
-    } finally {
-      confirmDeleteBtn.disabled = false;
-      deleteSpinner.style.display = "none";
-      deleteText.textContent = "Delete Sponsor";
     }
-  });
 
-  const createdAlert = document.getElementById("createdAlert");
-  const createdUrlInput = document.getElementById("createdUrlInput");
-  const copyUrlBtn = document.getElementById("copyUrlBtn");
-  const testUrlLink = document.getElementById("testUrlLink");
+    function appendPerkRow(target, initialValue = "") {
+      const listEl = target === "edit" ? editPerksList : createPerksList;
+      const emptyEl = target === "edit" ? editPerksEmpty : createPerksEmpty;
+      if (!listEl) return;
 
-  const refreshBtn = document.getElementById("refreshBtn");
-  const sponsorsTbody = document.getElementById("sponsorsTbody");
+      const row = document.createElement("div");
+      row.className = "perk-row";
+      row.innerHTML = `
+        <span class="perk-prefix" aria-hidden="true">&#10003;</span>
+        <input
+          type="text"
+          class="perk-input"
+          placeholder="e.g. 4 VIP Executive Passes at Dragon Gate"
+          value="${escapeHtml(initialValue)}"
+        />
+        <button
+          type="button"
+          class="remove-perk-btn"
+          data-action="remove-perk"
+          title="Remove Entry"
+          aria-label="Remove Entry"
+        >&times;</button>
+      `;
 
-  // Slug generator helper
-  function slugify(text) {
-    return text
-      .toString()
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9_-]/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-+|-+$/g, "");
-  }
+      listEl.appendChild(row);
+      updatePerksEmptyNote(listEl, emptyEl);
 
-  function updateUrlPreview() {
-    const slug = slugify(sponsorSlugInput.value.trim() || sponsorNameInput.value.trim() || "sponsor-name");
-    const origin = window.location.origin;
-    urlPreview.textContent = `${origin}/thanks-${slug}`;
-  }
-
-  sponsorNameInput.addEventListener("input", () => {
-    if (!sponsorSlugInput.dataset.manual) {
-      sponsorSlugInput.value = slugify(sponsorNameInput.value);
+      const input = row.querySelector(".perk-input");
+      if (input) {
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            appendPerkRow(target);
+          }
+        });
+        if (!initialValue) {
+          input.focus();
+        }
+      }
     }
-    updateUrlPreview();
-  });
 
-  sponsorSlugInput.addEventListener("input", () => {
-    sponsorSlugInput.dataset.manual = "true";
-    updateUrlPreview();
-  });
+    // Live URL Preview helpers
+    function updateCreateUrlPreview() {
+      const slug = slugify(sponsorSlugInput.value.trim() || sponsorNameInput.value.trim() || "sponsor-name");
+      urlPreview.textContent = `${window.location.origin}/thanks-${slug}`;
+    }
 
-  // Preset pills
-  document.querySelectorAll(".preset-pills .pill").forEach((pill) => {
-    pill.addEventListener("click", () => {
-      sponsorAmountInput.value = pill.getAttribute("data-amount");
+    function updateEditUrlPreview() {
+      const slug = slugify(editSponsorSlug.value.trim() || editSponsorName.value.trim() || "sponsor-name");
+      editUrlPreview.textContent = `${window.location.origin}/thanks-${slug}`;
+    }
+
+    sponsorNameInput.addEventListener("input", () => {
+      if (!sponsorSlugInput.dataset.manual) {
+        sponsorSlugInput.value = slugify(sponsorNameInput.value);
+      }
+      updateCreateUrlPreview();
     });
-  });
 
-  // Auth flow
-  function getStoredPassword() {
-    return sessionStorage.getItem(STORAGE_KEY) || "";
-  }
+    sponsorSlugInput.addEventListener("input", () => {
+      sponsorSlugInput.dataset.manual = "true";
+      updateCreateUrlPreview();
+    });
 
-  function showDashboard() {
-    lockView.style.display = "none";
-    dashboardView.style.display = "block";
-    authActions.style.display = "block";
-    updateUrlPreview();
-    loadSponsors();
-  }
-
-  function showLock() {
-    lockView.style.display = "flex";
-    dashboardView.style.display = "none";
-    authActions.style.display = "none";
-    sessionStorage.removeItem(STORAGE_KEY);
-    adminPasswordInput.value = "";
-  }
-
-  function getApiUrl(path) {
-    if (window.location.hostname === "localhost" && window.location.port !== "8787") {
-      return `http://localhost:8787${path}`;
-    }
-    return path;
-  }
-
-  logoutBtn.addEventListener("click", showLock);
-
-  loginForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    authError.style.display = "none";
-    const password = adminPasswordInput.value.trim();
-
-    try {
-      const res = await fetch(getApiUrl("/api/admin/verify"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Authentication failed");
+    editSponsorName.addEventListener("input", () => {
+      if (!editSponsorSlug.dataset.manual) {
+        editSponsorSlug.value = slugify(editSponsorName.value);
       }
+      updateEditUrlPreview();
+    });
 
-      sessionStorage.setItem(STORAGE_KEY, password);
-      showDashboard();
-    } catch (err) {
-      let msg = err.message || "Invalid password";
-      if (err.name === "TypeError" && window.location.hostname === "localhost" && window.location.port === "4321") {
-        msg = "Cannot connect to Cloudflare Functions on port 8787. Please run 'npm run dev:functions' in your terminal.";
+    editSponsorSlug.addEventListener("input", () => {
+      editSponsorSlug.dataset.manual = "true";
+      updateEditUrlPreview();
+    });
+
+    // Login Form Submit
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      authError.classList.add("hidden");
+      const password = adminPasswordInput.value.trim();
+
+      try {
+        const res = await fetch(getApiUrl("/api/admin/verify"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Authentication failed");
+        }
+
+        sessionStorage.setItem(STORAGE_KEY, password);
+        showDashboard();
+      } catch (err) {
+        let msg = err.message || "Invalid password";
+        const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+        if (err.name === "TypeError" && isLocal && window.location.port === "4321") {
+          msg = "Cannot connect to Cloudflare Functions on port 8787. Please ensure 'npm run dev:functions' is running.";
+        }
+        authError.textContent = msg;
+        authError.classList.remove("hidden");
       }
-      authError.textContent = msg;
-      authError.style.display = "block";
-    }
-  });
+    });
 
-  // Load sponsors table
-  async function loadSponsors() {
-    const password = getStoredPassword();
-    if (!password) return showLock();
+    logoutBtn.addEventListener("click", showLock);
+    refreshBtn.addEventListener("click", loadSponsors);
 
-    sponsorsTbody.innerHTML = `
-      <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Loading sponsors...</td></tr>
-    `;
+    // Load Sponsors Table Data
+    async function loadSponsors() {
+      const password = getStoredPassword();
+      if (!password) return showLock();
 
-    try {
-      const res = await fetch(getApiUrl("/api/admin/sponsors"), {
-        headers: { Authorization: `Bearer ${password}` },
-      });
+      sponsorsTbody.innerHTML = `
+        <tr><td colspan="6" class="table-empty-cell">Loading sponsors...</td></tr>
+      `;
 
-      if (res.status === 401) {
-        return showLock();
-      }
+      try {
+        const res = await fetch(getApiUrl("/api/admin/sponsors"), {
+          headers: { Authorization: `Bearer ${password}` },
+        });
 
-      const data = await res.json();
-      const sponsors = data.sponsors || [];
-      currentSponsors = sponsors;
+        if (res.status === 401) {
+          return showLock();
+        }
 
-      if (sponsors.length === 0) {
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to load sponsors");
+        }
+
+        const sponsors = data.sponsors || [];
+        sponsorsCache = sponsors;
+
+        if (sponsors.length === 0) {
+          sponsorsTbody.innerHTML = `
+            <tr><td colspan="6" class="table-empty-cell">No sponsor links created yet. Use the form above to generate one!</td></tr>
+          `;
+          return;
+        }
+
+        const origin = window.location.origin;
+        sponsorsTbody.innerHTML = sponsors.map((s) => {
+          const url = s.url || `${origin}/thanks-${s.slug}`;
+          const isPaid = s.status === "paid";
+          const statusClass = isPaid ? "status-paid" : "status-pending";
+          const formattedAmount = "¥" + Number(s.amount || 0).toLocaleString();
+          const dateStr = s.created_at ? new Date(s.created_at).toLocaleDateString() : "-";
+
+          let actionsHtml = "";
+          if (isPaid) {
+            actionsHtml = `
+              <span class="action-locked-badge" title="Payment completed. No actions are permitted on paid sponsors.">
+                🔒 No actions
+              </span>
+            `;
+          } else {
+            actionsHtml = `
+              <div class="action-btn-group">
+                <button type="button" class="btn btn-sm btn-secondary" data-action="copy-link" data-url="${escapeHtml(url)}" title="Copy Link">Copy</button>
+                <button type="button" class="btn btn-sm btn-secondary" data-action="open-edit" data-id="${escapeHtml(s.id)}" title="Edit Pending Sponsor">Edit</button>
+                <button type="button" class="btn btn-sm btn-danger" data-action="open-delete" data-id="${escapeHtml(s.id)}" title="Delete Pending Sponsor">Delete</button>
+              </div>
+            `;
+          }
+
+          return `
+            <tr>
+              <td><strong style="color:#fff;">${escapeHtml(s.name)}</strong></td>
+              <td><a href="${escapeHtml(url)}" target="_blank" style="color:#2dd4bf;text-decoration:none;font-family:monospace;font-size:0.85rem;">/thanks-${escapeHtml(s.slug)}</a></td>
+              <td><strong style="color:#fff;">${formattedAmount}</strong></td>
+              <td><span class="status-badge ${statusClass}">${isPaid ? "Paid ✓" : "Pending"}</span></td>
+              <td style="color:rgba(255,255,255,0.5);font-size:0.85rem;">${dateStr}</td>
+              <td style="text-align:right;">${actionsHtml}</td>
+            </tr>
+          `;
+        }).join("");
+      } catch (err) {
         sponsorsTbody.innerHTML = `
-          <tr><td colspan="6" style="text-align:center;padding:2rem;color:rgba(255,255,255,0.4);">No sponsor links created yet. Use the form above to generate one!</td></tr>
+          <tr><td colspan="6" class="table-empty-cell" style="color:#f87171;">Failed to load sponsors: ${escapeHtml(err.message)}</td></tr>
         `;
+      }
+    }
+
+    // Modal Operations
+    function openEditModal(id) {
+      const sponsor = sponsorsCache.find((s) => String(s.id) === String(id));
+      if (!sponsor) {
+        alert("Sponsor not found.");
         return;
       }
 
-      const origin = window.location.origin;
-      sponsorsTbody.innerHTML = sponsors.map((s) => {
-        const url = s.url || `${origin}/thanks-${s.slug}`;
-        const isPaid = s.status === "paid";
-        const statusClass = isPaid ? "status-paid" : "status-pending";
-        const formattedAmount = "¥" + Number(s.amount || 0).toLocaleString();
-        const dateStr = s.created_at ? new Date(s.created_at).toLocaleDateString() : "-";
-
-        let actionsHtml = "";
-        if (isPaid) {
-          actionsHtml = `
-            <span class="action-locked-badge" title="Payment completed. No actions are permitted on paid sponsors.">
-              <svg width="12" height="12" fill="currentColor" viewBox="0 0 20 20" style="display:inline-block;vertical-align:middle;margin-right:4px;">
-                <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
-              </svg>
-              No actions
-            </span>
-          `;
-        } else {
-          actionsHtml = `
-            <div class="action-btn-group">
-              <button class="btn btn-sm btn-secondary copy-link-btn" data-url="${escape(url)}" title="Copy Link">Copy</button>
-              <button class="btn btn-sm btn-secondary edit-sponsor-btn" data-id="${escape(s.id)}" title="Edit Pending Sponsor">Edit</button>
-              <button class="btn btn-sm btn-danger delete-sponsor-btn" data-id="${escape(s.id)}" title="Delete Pending Sponsor">Delete</button>
-              <a href="${escape(url)}" target="_blank" class="btn btn-sm btn-ghost" title="Open Sponsor Page">&nearr;</a>
-            </div>
-          `;
-        }
-
-        return `
-          <tr>
-            <td><strong style="color:#fff;">${escape(s.name)}</strong></td>
-            <td><a href="${escape(url)}" target="_blank" style="color:#2dd4bf;text-decoration:none;font-family:monospace;font-size:0.85rem;">/thanks-${escape(s.slug)}</a></td>
-            <td><strong style="color:#fff;">${formattedAmount}</strong></td>
-            <td><span class="status-badge ${statusClass}">${isPaid ? "Paid ✓" : "Pending"}</span></td>
-            <td style="color:rgba(255,255,255,0.5);font-size:0.85rem;">${dateStr}</td>
-            <td style="text-align:right;">${actionsHtml}</td>
-          </tr>
-        `;
-      }).join("");
-
-      // Bind buttons in table
-      document.querySelectorAll(".copy-link-btn").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const url = btn.getAttribute("data-url");
-          navigator.clipboard.writeText(url).then(() => {
-            const originalText = btn.textContent;
-            btn.textContent = "Copied!";
-            setTimeout(() => { btn.textContent = originalText; }, 2000);
-          });
-        });
-      });
-
-      document.querySelectorAll(".edit-sponsor-btn").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          openEditModal(btn.getAttribute("data-id"));
-        });
-      });
-
-      document.querySelectorAll(".delete-sponsor-btn").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          openDeleteModal(btn.getAttribute("data-id"));
-        });
-      });
-    } catch (err) {
-      sponsorsTbody.innerHTML = `
-        <tr><td colspan="6" style="text-align:center;padding:2rem;color:#f87171;">Failed to load sponsors: ${escape(err.message)}</td></tr>
-      `;
-    }
-  }
-
-  refreshBtn.addEventListener("click", loadSponsors);
-
-  // Create sponsor link submission
-  createSponsorForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    formError.style.display = "none";
-    createdAlert.style.display = "none";
-
-    const password = getStoredPassword();
-    if (!password) return showLock();
-
-    submitBtn.disabled = true;
-    submitSpinner.style.display = "inline-block";
-    submitText.textContent = "Creating sponsor link...";
-
-    const name = sponsorNameInput.value.trim();
-    const slug = slugify(sponsorSlugInput.value.trim() || name);
-    const amount = Number(sponsorAmountInput.value);
-    const perks = Array.from(perksList.querySelectorAll(".perk-input"))
-      .map((el) => el.value.trim())
-      .filter(Boolean);
-
-    try {
-      const res = await fetch(getApiUrl("/api/admin/sponsors"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${password}`,
-        },
-        body: JSON.stringify({
-          name,
-          slug,
-          amount,
-          perks,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to create sponsor link");
+      if (sponsor.status === "paid") {
+        alert("This sponsor has completed payment. No actions are permitted on paid sponsors.");
+        return;
       }
 
-      // Show success alert
-      createdUrlInput.value = data.url;
-      testUrlLink.href = data.url;
-      createdAlert.style.display = "block";
-      createdAlert.scrollIntoView({ behavior: "smooth" });
+      editSponsorId.value = sponsor.id;
+      editSponsorName.value = sponsor.name || "";
+      editSponsorSlug.value = sponsor.slug || "";
+      editSponsorSlug.dataset.manual = "true";
+      editSponsorAmount.value = sponsor.amount || "";
+      editFormError.classList.add("hidden");
 
-      // Reset form
-      createSponsorForm.reset();
-      perksList.innerHTML = "";
-      updatePerksEmptyState();
-      delete sponsorSlugInput.dataset.manual;
-      updateUrlPreview();
+      updateEditUrlPreview();
 
-      // Reload table
-      loadSponsors();
-    } catch (err) {
-      formError.textContent = err.message || "An error occurred";
-      formError.style.display = "block";
-    } finally {
-      submitBtn.disabled = false;
-      submitSpinner.style.display = "none";
-      submitText.textContent = "Generate Custom Sponsor Link →";
+      editPerksList.innerHTML = "";
+      const perks = Array.isArray(sponsor.metadata?.perks)
+        ? sponsor.metadata.perks
+        : (sponsor.description ? sponsor.description.split("\n").map((p) => p.trim()).filter(Boolean) : []);
+
+      perks.forEach((p) => appendPerkRow("edit", p));
+      updatePerksEmptyNote(editPerksList, editPerksEmpty);
+
+      if (typeof editDialog.showModal === "function") {
+        editDialog.showModal();
+      } else {
+        editDialog.setAttribute("open", "");
+      }
     }
-  });
 
-  // Copy created URL
-  copyUrlBtn.addEventListener("click", () => {
-    createdUrlInput.select();
-    navigator.clipboard.writeText(createdUrlInput.value).then(() => {
-      copyUrlBtn.textContent = "Copied!";
-      setTimeout(() => { copyUrlBtn.textContent = "Copy Link"; }, 2000);
+    function openDeleteModal(id) {
+      const sponsor = sponsorsCache.find((s) => String(s.id) === String(id));
+      if (!sponsor) {
+        alert("Sponsor not found.");
+        return;
+      }
+
+      if (sponsor.status === "paid") {
+        alert("This sponsor has completed payment. No actions are permitted on paid sponsors.");
+        return;
+      }
+
+      activeDeleteId = sponsor.id;
+      deleteDialogDesc.innerHTML = `Are you sure you want to delete the pending sponsor link for <strong>${escapeHtml(sponsor.name)}</strong> (¥${Number(sponsor.amount || 0).toLocaleString()})? This link will no longer be accessible.`;
+      deleteDialogError.classList.add("hidden");
+
+      if (typeof deleteDialog.showModal === "function") {
+        deleteDialog.showModal();
+      } else {
+        deleteDialog.setAttribute("open", "");
+      }
+    }
+
+    function closeDialog(dialogEl) {
+      if (!dialogEl) return;
+      if (typeof dialogEl.close === "function") {
+        dialogEl.close();
+      } else {
+        dialogEl.removeAttribute("open");
+      }
+      if (dialogEl === deleteDialog) activeDeleteId = null;
+    }
+
+    // Global Click Delegation (Handles All Actions Robustly)
+    document.addEventListener("click", (e) => {
+      // Add Perk Row
+      const addBtn = e.target.closest('[data-action="add-perk"]');
+      if (addBtn) {
+        e.preventDefault();
+        const target = addBtn.getAttribute("data-target") || "create";
+        appendPerkRow(target);
+        return;
+      }
+
+      // Remove Perk Row
+      const removeBtn = e.target.closest('[data-action="remove-perk"]');
+      if (removeBtn) {
+        e.preventDefault();
+        const row = removeBtn.closest(".perk-row");
+        if (row) {
+          const parentList = row.parentElement;
+          row.remove();
+          if (parentList === editPerksList) {
+            updatePerksEmptyNote(editPerksList, editPerksEmpty);
+          } else {
+            updatePerksEmptyNote(createPerksList, createPerksEmpty);
+          }
+        }
+        return;
+      }
+
+      // Copy Link Button
+      const copyBtn = e.target.closest('[data-action="copy-link"]');
+      if (copyBtn) {
+        e.preventDefault();
+        const url = copyBtn.getAttribute("data-url");
+        if (url) {
+          navigator.clipboard.writeText(url).then(() => {
+            const orig = copyBtn.textContent;
+            copyBtn.textContent = "Copied!";
+            setTimeout(() => { copyBtn.textContent = orig; }, 2000);
+          });
+        }
+        return;
+      }
+
+      // Open Edit Modal
+      const editBtn = e.target.closest('[data-action="open-edit"]');
+      if (editBtn) {
+        e.preventDefault();
+        const id = editBtn.getAttribute("data-id");
+        if (id) openEditModal(id);
+        return;
+      }
+
+      // Open Delete Modal
+      const delBtn = e.target.closest('[data-action="open-delete"]');
+      if (delBtn) {
+        e.preventDefault();
+        const id = delBtn.getAttribute("data-id");
+        if (id) openDeleteModal(id);
+        return;
+      }
+
+      // Close Dialog
+      const closeBtn = e.target.closest('[data-action="close-dialog"]');
+      if (closeBtn) {
+        e.preventDefault();
+        const dialogId = closeBtn.getAttribute("data-dialog");
+        const dialogEl = document.getElementById(dialogId);
+        closeDialog(dialogEl);
+        return;
+      }
     });
-  });
 
-  function escape(str) {
-    return String(str || "").replace(/[&<>"']/g, (c) => ({
-      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-    })[c]);
-  }
+    // Close Dialog on backdrop click
+    editDialog.addEventListener("click", (e) => {
+      if (e.target === editDialog) closeDialog(editDialog);
+    });
+    deleteDialog.addEventListener("click", (e) => {
+      if (e.target === deleteDialog) closeDialog(deleteDialog);
+    });
 
-  // Initial auto-login check
-  if (getStoredPassword()) {
-    showDashboard();
-  }
+    // Create Sponsor Form Submit
+    createSponsorForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      createFormError.classList.add("hidden");
+      createdBanner.classList.add("hidden");
+
+      const password = getStoredPassword();
+      if (!password) return showLock();
+
+      createSubmitBtn.disabled = true;
+      createSpinner.classList.remove("hidden");
+      createText.textContent = "Creating sponsor link...";
+
+      const name = sponsorNameInput.value.trim();
+      const slug = slugify(sponsorSlugInput.value.trim() || name);
+      const amount = Number(sponsorAmountInput.value);
+      const perks = Array.from(createPerksList.querySelectorAll(".perk-input"))
+        .map((el) => el.value.trim())
+        .filter(Boolean);
+
+      try {
+        const res = await fetch(getApiUrl("/api/admin/sponsors"), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${password}`,
+          },
+          body: JSON.stringify({ name, slug, amount, perks }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to create sponsor link");
+        }
+
+        // Show banner
+        createdUrlInput.value = data.url;
+        testCreatedUrlLink.href = data.url;
+        createdBanner.classList.remove("hidden");
+        createdBanner.scrollIntoView({ behavior: "smooth" });
+
+        // Reset form
+        createSponsorForm.reset();
+        createPerksList.innerHTML = "";
+        updatePerksEmptyNote(createPerksList, createPerksEmpty);
+        delete sponsorSlugInput.dataset.manual;
+        updateCreateUrlPreview();
+
+        loadSponsors();
+      } catch (err) {
+        createFormError.textContent = err.message || "An error occurred";
+        createFormError.classList.remove("hidden");
+      } finally {
+        createSubmitBtn.disabled = false;
+        createSpinner.classList.add("hidden");
+        createText.textContent = "Generate Custom Sponsor Link →";
+      }
+    });
+
+    // Copy from created banner
+    copyCreatedUrlBtn.addEventListener("click", () => {
+      createdUrlInput.select();
+      navigator.clipboard.writeText(createdUrlInput.value).then(() => {
+        copyCreatedUrlBtn.textContent = "Copied!";
+        setTimeout(() => { copyCreatedUrlBtn.textContent = "Copy Link"; }, 2000);
+      });
+    });
+
+    // Edit Sponsor Form Submit (PUT)
+    editSponsorForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      editFormError.classList.add("hidden");
+      saveEditBtn.disabled = true;
+      editSpinner.classList.remove("hidden");
+      editText.textContent = "Saving Changes...";
+
+      const password = getStoredPassword();
+      const id = editSponsorId.value;
+      const name = editSponsorName.value.trim();
+      const slug = slugify(editSponsorSlug.value.trim() || name);
+      const amount = Number(editSponsorAmount.value);
+      const perks = Array.from(editPerksList.querySelectorAll(".perk-input"))
+        .map((input) => input.value.trim())
+        .filter(Boolean);
+
+      try {
+        const res = await fetch(getApiUrl("/api/admin/sponsors"), {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${password}`,
+          },
+          body: JSON.stringify({ id, name, slug, amount, perks }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to update sponsor link");
+        }
+
+        closeDialog(editDialog);
+        loadSponsors();
+      } catch (err) {
+        editFormError.textContent = err.message || "An error occurred";
+        editFormError.classList.remove("hidden");
+      } finally {
+        saveEditBtn.disabled = false;
+        editSpinner.classList.add("hidden");
+        editText.textContent = "Save Changes →";
+      }
+    });
+
+    // Confirm Delete Sponsor (DELETE)
+    confirmDeleteBtn.addEventListener("click", async () => {
+      if (!activeDeleteId) return;
+
+      confirmDeleteBtn.disabled = true;
+      deleteSpinner.classList.remove("hidden");
+      deleteBtnText.textContent = "Deleting...";
+
+      const password = getStoredPassword();
+
+      try {
+        const res = await fetch(getApiUrl(`/api/admin/sponsors?id=${encodeURIComponent(activeDeleteId)}`), {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${password}` },
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to delete sponsor link");
+        }
+
+        closeDialog(deleteDialog);
+        loadSponsors();
+      } catch (err) {
+        deleteDialogError.textContent = err.message || "Failed to delete sponsor";
+        deleteDialogError.classList.remove("hidden");
+      } finally {
+        confirmDeleteBtn.disabled = false;
+        deleteSpinner.classList.add("hidden");
+        deleteBtnText.textContent = "Delete Sponsor";
+      }
+    });
+
+    // Auto-login if password cached in session
+    if (getStoredPassword()) {
+      showDashboard();
+    }
+  })();
 </script>
