@@ -456,17 +456,6 @@ async function renderSponsorPage(context, slug, url) {
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .security-note {
-      text-align: center;
-      margin-top: 1rem;
-      font-size: 0.8rem;
-      color: var(--text-dim);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.4rem;
-    }
-
     /* Alerts */
     .alert {
       padding: 0.9rem 1.25rem;
@@ -590,19 +579,16 @@ async function renderSponsorPage(context, slug, url) {
           height="80"
         />
       </a>
-      <div class="header-badge">
-        September 25, 2026 · Dragon Gate, Shibuya
-      </div>
     </div>
   </header>
 
   <main class="container">
     <!-- Welcome Partner Banner -->
     <div class="partner-banner">
-      <span class="partner-tag">Official Partner & Sponsor</span>
+      <span class="partner-tag">Official Partner</span>
       <h2 class="partner-title">Welcome, ${safeName}</h2>
       <p class="partner-desc">
-        Thank you for supporting founders and investors taking off from Tokyo. Please finalize your sponsorship contribution below to confirm your team passes and brand visibility.
+        Thank you for supporting founders and investors taking off from Tokyo. Please finalize your partnership below.
       </p>
     </div>
 
@@ -651,22 +637,20 @@ async function renderSponsorPage(context, slug, url) {
              <h2 class="ticket-heading">${safeName} Sponsorship Ticket</h2>
 
              <div class="ticket-price-strip">
-               <span class="price-label">Predetermined Contribution</span>
+               <span class="price-label">Your Payment</span>
                <div class="price">${formattedAmount}<span>JPY</span></div>
              </div>
 
              ${perksHtml}
 
              <form id="sponsorForm">
-               <div class="form-section-title">Billing & Contact Information</div>
-
                <div class="field-row">
                  <div class="field">
                    <label for="contactName">Representative Name *</label>
                    <input type="text" id="contactName" placeholder="e.g. Jane Doe" required />
                  </div>
                  <div class="field">
-                   <label for="contactEmail">Confirmation & Billing Email *</label>
+                   <label for="contactEmail">Billing Email *</label>
                    <input type="email" id="contactEmail" placeholder="billing@yourcompany.com" value="${escapeHtml(sponsor.contact_email || "")}" required />
                  </div>
                </div>
@@ -677,11 +661,6 @@ async function renderSponsorPage(context, slug, url) {
                  <span class="spinner" id="btnSpinner"></span>
                  <span id="btnText">Proceed to Stripe Checkout (${formattedAmount}) &rarr;</span>
                </button>
-
-               <div class="security-note">
-                 <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path></svg>
-                 Secured with 256-bit SSL encryption powered by Stripe
-               </div>
              </form>
            </div>
 

@@ -315,3 +315,127 @@ export async function recordPaidSponsor(env, session, fetchFn = fetch) {
     return null;
   }
 }
+
+/**
+ * Fetches a sponsor by their UUID id.
+ */
+export async function getSponsorById(env, id, fetchFn = fetch) {
+  const config = getSupabaseConfig(env);
+  if (!config) return null;
+
+  try {
+    const cleanId = encodeURIComponent(String(id).trim());
+    const res = await fetchFn(`${config.url}/rest/v1/sponsors?id=eq.${cleanId}&limit=1`, {
+      method: "GET",
+      headers: getHeaders(config.key),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn(`[Supabase] Fetch sponsor by id returned ${res.status}: ${errText}`);
+      return null;
+    }
+
+    const rows = await res.json();
+    return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+  } catch (err) {
+    console.warn("[Supabase] Failed to fetch sponsor by id:", err.message);
+    return null;
+  }
+}
+
+/**
+ * Updates a pending sponsor record.
+ * Refuses update if sponsor is in 'paid' status.
+ */
+export async function updatePendingSponsor(env, id, updates, fetchFn = fetch) {
+  const config = getSupabaseConfig(env);
+  if (!config) return { error: "Database not configured", status: 500 };
+
+  const existing = await getSponsorById(env, id, fetchFn);
+  if (!existing) {
+    return { error: "Sponsor not found", status: 404 };
+  }
+
+  if (existing.status === "paid") {
+    return {
+      error: "This sponsor package has already been paid. No actions are permitted on paid payments.",
+      status: 400,
+    };
+  }
+
+  const payload = {};
+  if (updates.name !== undefined) payload.name = String(updates.name).trim();
+  if (updates.slug !== undefined) payload.slug = String(updates.slug).trim().toLowerCase();
+  if (updates.amount !== undefined) payload.amount = Math.round(Number(updates.amount));
+  if (updates.description !== undefined) payload.description = updates.description;
+  if (updates.contactEmail !== undefined) payload.contact_email = updates.contactEmail;
+  if (updates.metadata !== undefined) payload.metadata = updates.metadata;
+
+  try {
+    const cleanId = encodeURIComponent(String(id).trim());
+    const res = await fetchFn(`${config.url}/rest/v1/sponsors?id=eq.${cleanId}&status=eq.pending`, {
+      method: "PATCH",
+      headers: getHeaders(config.key),
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn(`[Supabase] Update pending sponsor returned ${res.status}: ${errText}`);
+      return { error: `Database error: ${errText}`, status: 500 };
+    }
+
+    const updated = await res.json();
+    const result = Array.isArray(updated) && updated.length > 0 ? updated[0] : { ...existing, ...payload };
+    return { data: result };
+  } catch (err) {
+    console.warn("[Supabase] Failed to update pending sponsor:", err.message);
+    return { error: err.message, status: 500 };
+  }
+}
+
+/**
+ * Deletes a pending sponsor record.
+ * Refuses deletion if sponsor is in 'paid' status.
+ */
+export async function deletePendingSponsor(env, id, fetchFn = fetch) {
+  const config = getSupabaseConfig(env);
+  if (!config) return { error: "Database not configured", status: 500 };
+
+  const existing = await getSponsorById(env, id, fetchFn);
+  if (!existing) {
+    return { error: "Sponsor not found", status: 404 };
+  }
+
+  if (existing.status === "paid") {
+    return {
+      error: "This sponsor package has already been paid. No actions are permitted on paid payments.",
+      status: 400,
+    };
+  }
+
+  try {
+    const cleanId = encodeURIComponent(String(id).trim());
+    const res = await fetchFn(`${config.url}/rest/v1/sponsors?id=eq.${cleanId}&status=eq.pending`, {
+      method: "DELETE",
+      headers: getHeaders(config.key),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn(`[Supabase] Delete pending sponsor returned ${res.status}: ${errText}`);
+      return { error: `Database error: ${errText}`, status: 500 };
+    }
+
+    const deleted = await res.json();
+    return {
+      success: true,
+      deleted: Array.isArray(deleted) && deleted.length > 0 ? deleted[0] : existing,
+    };
+  } catch (err) {
+    console.warn("[Supabase] Failed to delete pending sponsor:", err.message);
+    return { error: err.message, status: 500 };
+  }
+}
+
