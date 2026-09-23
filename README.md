@@ -80,15 +80,12 @@ stripe listen --forward-to localhost:8787/api/stripe-webhook
 2. In **Project Settings → API**, copy your **Project URL** and **`service_role`** secret key.
 3. Add `SUPABASE_URL` and `SUPABASE_SECRET_KEY` to `.dev.vars` (locally) and to Cloudflare Pages Environment Variables (production).
 
-### Sponsor Custom URLs & Admin Dashboard
+### Admin Dashboard (Tickets & Sponsors)
 
-1. Configure `SPONSOR_ADMIN_PASSWORD` in `.dev.vars` / Cloudflare Pages environment variables.
-2. Open **http://localhost:8787/admin/sponsors** (or `/admin`).
-3. Enter the admin password to unlock the dashboard.
-4. Input the **Sponsor Name**, custom **Slug**, and predetermined **Amount (JPY)** (e.g. Acme Corp -> `/thanks-acme-corp` for ¥500,000).
-5. Share the generated link `https://<domain>/thanks-{{SPONSOR_NAME}}` directly with the sponsor.
-6. The sponsor page contains a custom ticket box that launches a Stripe Checkout session.
-7. Upon successful payment, a **separate Sponsor Thanks Email** is sent via Brevo and the sponsor record in Supabase is updated to `paid`.
+1. Configure `SPONSOR_ADMIN_PASSWORD` (or `ADMIN_PASSWORD`) in `.dev.vars` / Cloudflare Pages environment variables.
+2. Open **http://localhost:8787/admin/tickets** to view, search, and filter all attendee ticket registrations (`registrations` Supabase table) between **Paid** and **Pending**.
+3. Open **http://localhost:8787/admin/sponsors** to manage custom sponsor checkout links.
+4. Entering the admin password unlocks the session across both dashboard views.
 
 ## Project structure
 
@@ -110,7 +107,8 @@ src/
 ├── pages/
 │   ├── admin/
 │   │   ├── index.astro     ← redirect to /admin/sponsors
-│   │   └── sponsors.astro  ← password-locked sponsor management & link generator
+│   │   ├── sponsors.astro  ← password-locked sponsor management & link generator
+│   │   └── tickets.astro   ← minimal ticket registrations table with pending/paid filter
 │   └── index.astro
 └── styles/
     └── global.css
@@ -123,7 +121,8 @@ functions/
 │   ├── stripe-webhook.js           ← verifies webhook, records paid registration/sponsor, dispatches emails
 │   └── admin/
 │       ├── verify.js               ← admin password verification
-│       └── sponsors.js             ← sponsor link CRUD API
+│       ├── sponsors.js             ← sponsor link CRUD API
+│       └── tickets.js              ← ticket registrations listing & filter API
 └── lib/
     ├── email.js             ← HTML/text confirmation email templates (attendees & sponsors)
     └── supabase.js          ← fetch-based Supabase PostgREST client

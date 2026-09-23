@@ -1,0 +1,1779 @@
+---
+import Layout from "../../layouts/Layout.astro";
+---
+
+<Layout title="Ticket Registrations — Super Office Hours Admin">
+  <div class="admin-wrapper">
+    <!-- Top Navigation Header -->
+    <header class="admin-header">
+      <div class="header-inner">
+        <div class="header-left">
+          <a href="/" class="header-brand" aria-label="Takeoff Tokyo home">
+            <img src="/images/takeoff-tokyo-logo.png" alt="Takeoff Tokyo" height="26" style="height:26px;width:auto;" />
+            <span class="badge-admin">Admin</span>
+          </a>
+          <nav class="admin-nav" aria-label="Admin Navigation">
+            <a href="/admin/tickets" class="admin-nav-link active">Tickets</a>
+            <a href="/admin/sponsors" class="admin-nav-link">Sponsors</a>
+          </nav>
+        </div>
+        <div id="authActions" class="hidden">
+          <button type="button" id="logoutBtn" class="btn btn-ghost btn-sm">Lock Dashboard</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 1. Password Lock View -->
+    <div id="lockView" class="auth-wrapper">
+      <div class="auth-card">
+        <div class="auth-icon">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(255,255,255,0.7);"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        </div>
+        <h2>Organizer Access</h2>
+        <p class="auth-desc">Enter the admin password to view and filter registered attendee tickets.</p>
+
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="adminPassword">Password</label>
+            <input
+              type="password"
+              id="adminPassword"
+              class="input-field"
+              placeholder="Enter admin password"
+              autocomplete="current-password"
+              required
+            />
+          </div>
+          <div id="authError" class="alert-error hidden"></div>
+          <button type="submit" id="unlockBtn" class="btn btn-primary btn-block" style="margin-top:1.25rem;">
+            Unlock Dashboard &rarr;
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 2. Main Admin Dashboard -->
+    <main id="dashboardView" class="dashboard-wrapper hidden">
+      <!-- Minimal Header -->
+      <div class="dashboard-header-row">
+        <div>
+          <h1>Ticket Registrations</h1>
+          <p class="text-muted">Live registrations from database</p>
+        </div>
+        <div class="header-controls">
+          <button type="button" id="exportCsvBtn" class="btn btn-ghost btn-sm" title="Export current list to CSV">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            Export CSV
+          </button>
+          <button type="button" id="refreshBtn" class="btn btn-ghost btn-sm">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Ribbon -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <span class="metric-label">Total Registrations</span>
+          <span class="metric-val" id="metricTotal">0</span>
+        </div>
+        <div class="metric-card metric-paid">
+          <span class="metric-label">Paid Tickets</span>
+          <span class="metric-val" id="metricPaid">0</span>
+        </div>
+        <div class="metric-card metric-pending">
+          <span class="metric-label">Pending Payment</span>
+          <span class="metric-val" id="metricPending">0</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Paid Revenue</span>
+          <span class="metric-val" id="metricRevenue">¥0</span>
+        </div>
+      </div>
+
+      <!-- Filters and Search Bar -->
+      <div class="toolbar">
+        <div class="filters-row">
+          <!-- Status Filter -->
+          <div class="filter-group">
+            <span class="filter-group-label">Status</span>
+            <div class="filter-tabs" role="tablist" aria-label="Filter payment status">
+              <button type="button" class="filter-tab active" data-status="all" id="tabStatusAll">
+                All <span class="tab-count" id="countStatusAll">0</span>
+              </button>
+              <button type="button" class="filter-tab" data-status="paid" id="tabStatusPaid">
+                Paid <span class="tab-count" id="countStatusPaid">0</span>
+              </button>
+              <button type="button" class="filter-tab" data-status="pending" id="tabStatusPending">
+                Pending <span class="tab-count" id="countStatusPending">0</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Ticket Type Filter -->
+          <div class="filter-group">
+            <span class="filter-group-label">Type</span>
+            <div class="filter-tabs" role="tablist" aria-label="Filter ticket type">
+              <button type="button" class="filter-tab active" data-type="all" id="tabTypeAll">
+                All Types <span class="tab-count" id="countTypeAll">0</span>
+              </button>
+              <button type="button" class="filter-tab" data-type="startup" id="tabTypeStartup">
+                Startup <span class="tab-count" id="countTypeStartup">0</span>
+              </button>
+              <button type="button" class="filter-tab" data-type="investor" id="tabTypeInvestor">
+                Investor <span class="tab-count" id="countTypeInvestor">0</span>
+              </button>
+              <button type="button" class="filter-tab" data-type="student" id="tabTypeStudent">
+                Student <span class="tab-count" id="countTypeStudent">0</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="search-box">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input
+            type="text"
+            id="searchInput"
+            class="search-input"
+            placeholder="Search name, email, company, ticket..."
+            aria-label="Search registrations"
+          />
+          <button type="button" id="clearSearchBtn" class="clear-search-btn hidden" aria-label="Clear search">&times;</button>
+        </div>
+      </div>
+
+      <!-- Registrations Table -->
+      <div class="card table-card">
+        <div class="table-responsive">
+          <table class="tickets-table">
+            <thead>
+              <tr>
+                <th style="width:110px;">Status</th>
+                <th>Attendee</th>
+                <th>Company &amp; Role</th>
+                <th>Tickets</th>
+                <th style="text-align:right;">Amount</th>
+                <th style="width:140px;">Registered</th>
+                <th style="width:70px;text-align:right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="ticketsTbody">
+              <tr>
+                <td colspan="7" class="table-empty-cell">Loading registrations...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+
+    <!-- Attendee Details Dialog -->
+    <dialog id="detailsDialog" class="admin-dialog">
+      <div class="dialog-box">
+        <div class="dialog-header">
+          <div>
+            <h2 id="detailName">Attendee Details</h2>
+            <p id="detailEmail" class="dialog-subtitle"></p>
+          </div>
+          <button type="button" class="btn-close-dialog" data-action="close-dialog" aria-label="Close dialog">&times;</button>
+        </div>
+
+        <div class="detail-grid">
+          <div class="detail-item">
+            <span class="detail-label">Payment Status</span>
+            <div id="detailStatus"></div>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Total Amount</span>
+            <span id="detailAmount" class="detail-value font-mono"></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Company</span>
+            <span id="detailCompany" class="detail-value"></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Role</span>
+            <span id="detailRole" class="detail-value"></span>
+          </div>
+          <div class="detail-item full-width">
+            <span class="detail-label">Tickets Purchased</span>
+            <div id="detailTickets" class="detail-tickets-box"></div>
+          </div>
+          <div class="detail-item full-width" id="questionnaireSection">
+            <div class="section-label-row">
+              <span class="detail-label">Questionnaire Responses</span>
+              <span id="detailQCount" class="q-badge-count"></span>
+            </div>
+            <div id="detailQuestionnaire" class="detail-questionnaire-wrap"></div>
+            <div class="q-raw-toggle-wrap">
+              <button type="button" id="toggleRawJsonBtn" class="btn btn-ghost btn-sm" style="font-size:0.75rem;padding:0.25rem 0.65rem;">
+                <span id="rawJsonBtnText">Show Raw JSON</span>
+              </button>
+              <pre id="qRawJsonBox" class="detail-code-box hidden" style="margin-top:0.6rem;"></pre>
+            </div>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Registration ID</span>
+            <code id="detailRegId" class="detail-code"></code>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Stripe Session ID</span>
+            <code id="detailStripeSession" class="detail-code"></code>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Created At</span>
+            <span id="detailCreatedAt" class="detail-value"></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Updated At</span>
+            <span id="detailUpdatedAt" class="detail-value"></span>
+          </div>
+        </div>
+
+        <div class="dialog-actions" style="justify-content:flex-end;margin-top:1.5rem;">
+          <button type="button" class="btn btn-secondary" data-action="close-dialog">Close</button>
+        </div>
+      </div>
+    </dialog>
+  </div>
+</Layout>
+
+<style>
+  /* Layout & Theme */
+  .admin-wrapper {
+    min-height: 100vh;
+    background: #09090b;
+    color: #f3f4f6;
+    display: flex;
+    flex-direction: column;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  }
+  .admin-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(9, 9, 11, 0.85);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .header-inner {
+    max-width: 1150px;
+    margin: 0 auto;
+    padding: 0.85rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+  .header-brand {
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: #fff;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+  .badge-admin {
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: rgba(168, 85, 247, 0.2);
+    border: 1px solid rgba(168, 85, 247, 0.4);
+    color: #c084fc;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* Admin Header Nav */
+  .admin-nav {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 9999px;
+    padding: 0.2rem;
+    gap: 0.2rem;
+  }
+  .admin-nav-link {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    text-decoration: none;
+    padding: 0.35rem 0.85rem;
+    border-radius: 9999px;
+    transition: all 0.15s ease;
+  }
+  .admin-nav-link:hover {
+    color: #fff;
+  }
+  .admin-nav-link.active {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    font-weight: 700;
+  }
+
+  /* Password Lock View */
+  .auth-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 1.5rem;
+  }
+  .auth-card {
+    background: #141418;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 2.5rem 2rem;
+    max-width: 440px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
+  }
+  .auth-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+  }
+  .auth-card h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.5rem;
+  }
+  .auth-desc {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 1.75rem;
+  }
+
+  /* Main Dashboard Container */
+  .dashboard-wrapper {
+    max-width: 1150px;
+    margin: 2rem auto 4rem;
+    padding: 0 1.5rem;
+    width: 100%;
+    box-sizing: border-box;
+    flex: 1;
+  }
+  .dashboard-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .dashboard-header-row h1 {
+    font-family: "TT Lakes Neue Expanded", "Barlow Condensed", sans-serif;
+    font-weight: 900;
+    font-stretch: 125%;
+    font-size: clamp(1.6rem, 3.5vw, 2.1rem);
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    color: #fff;
+    margin: 0 0 0.25rem 0;
+  }
+  .text-muted {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.9rem;
+    margin: 0;
+  }
+  .header-controls {
+    display: flex;
+    gap: 0.65rem;
+    align-items: center;
+  }
+
+  /* Metrics Ribbon */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+  }
+  .metric-card {
+    background: #141418;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1.15rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .metric-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.45);
+  }
+  .metric-val {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #fff;
+    font-family: "TT Lakes Neue Expanded", "Barlow Condensed", monospace, sans-serif;
+    font-stretch: 115%;
+  }
+  .metric-paid .metric-val {
+    color: #2dd4bf;
+  }
+  .metric-pending .metric-val {
+    color: #fbbf24;
+  }
+
+  /* Toolbar: Tabs & Search */
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+  }
+  .filters-row {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+  }
+  .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .filter-group-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.4);
+  }
+  .filter-tabs {
+    display: inline-flex;
+    background: #141418;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 0.3rem;
+    gap: 0.3rem;
+  }
+  .filter-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+  }
+  .filter-tab:hover {
+    color: #fff;
+  }
+  .filter-tab.active {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+  }
+  .tab-count {
+    font-size: 0.72rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 700;
+  }
+  .filter-tab.active .tab-count {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+  }
+
+  .search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 1;
+    max-width: 380px;
+    min-width: 240px;
+  }
+  .search-icon {
+    position: absolute;
+    left: 0.85rem;
+    color: rgba(255, 255, 255, 0.4);
+    pointer-events: none;
+  }
+  .search-input {
+    width: 100%;
+    padding: 0.6rem 2.2rem 0.6rem 2.4rem;
+    background: #141418;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    color: #fff;
+    font-size: 0.88rem;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: all 0.15s ease;
+  }
+  .search-input:focus {
+    outline: none;
+    border-color: #2dd4bf;
+    background: #18181f;
+    box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.2);
+  }
+  .search-input::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+  }
+  .clear-search-btn {
+    position: absolute;
+    right: 0.75rem;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 0.2rem;
+  }
+  .clear-search-btn:hover {
+    color: #fff;
+  }
+
+  /* Table Card */
+  .card {
+    background: #141418;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .table-card {
+    padding: 0;
+  }
+  .table-responsive {
+    overflow-x: auto;
+  }
+  .tickets-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    text-align: left;
+  }
+  .tickets-table th {
+    padding: 0.85rem 1rem;
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.02);
+  }
+  :global(.tickets-table td) {
+    padding: 0.95rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    vertical-align: middle;
+  }
+  :global(.tickets-table tr:hover td) {
+    background: rgba(255, 255, 255, 0.025);
+  }
+  .table-empty-cell,
+  :global(.table-empty-cell) {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.92rem;
+  }
+
+  /* Badges & Cells */
+  :global(.status-badge) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+  :global(.status-paid) {
+    background: rgba(45, 212, 191, 0.14);
+    color: #2dd4bf;
+    border: 1px solid rgba(45, 212, 191, 0.3);
+  }
+  :global(.status-pending) {
+    background: rgba(245, 158, 11, 0.14);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+  :global(.status-failed),
+  :global(.status-canceled) {
+    background: rgba(239, 68, 68, 0.14);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+  :global(.attendee-name) {
+    font-weight: 700;
+    color: #fff;
+    display: block;
+    margin-bottom: 0.15rem;
+  }
+  :global(.attendee-email) {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-decoration: none;
+  }
+  :global(.attendee-email:hover) {
+    color: #2dd4bf;
+    text-decoration: underline;
+  }
+  :global(.company-name) {
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    display: block;
+  }
+  :global(.role-name) {
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.45);
+  }
+  :global(.tickets-summary) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+  :global(.ticket-tag) {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.85);
+    border-radius: 6px;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.76rem;
+    font-weight: 600;
+  }
+  :global(.ticket-tag-strong) {
+    color: #2dd4bf;
+  }
+  :global(.amount-cell) {
+    text-align: right;
+    font-weight: 700;
+    color: #fff;
+    font-family: monospace, sans-serif;
+  }
+  :global(.date-cell) {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+  }
+  :global(.date-relative) {
+    font-size: 0.74rem;
+    color: rgba(255, 255, 255, 0.4);
+    display: block;
+  }
+
+  /* Form & Inputs */
+  .form-group {
+    text-align: left;
+    margin-bottom: 1.25rem;
+  }
+  .form-group label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 0.4rem;
+  }
+  .input-field {
+    width: 100%;
+    background: rgba(10, 10, 12, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    color: #fff;
+    font-size: 0.95rem;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+  }
+  .input-field:focus {
+    outline: none;
+    border-color: #2dd4bf;
+    box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.25);
+  }
+
+  /* Buttons */
+  .btn,
+  :global(.btn) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.65rem 1.15rem;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.18s ease;
+    border: none;
+  }
+  .btn-primary {
+    background: #fff;
+    color: #09090b;
+  }
+  .btn-primary:hover {
+    background: #e4e4e7;
+    transform: translateY(-1px);
+  }
+  .btn-ghost,
+  :global(.btn-ghost) {
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .btn-ghost:hover,
+  :global(.btn-ghost:hover) {
+    background: rgba(255, 255, 255, 0.09);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+  .btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+  .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.14);
+  }
+  .btn-sm,
+  :global(.btn-sm) {
+    padding: 0.45rem 0.85rem;
+    font-size: 0.8rem;
+    border-radius: 8px;
+  }
+  .btn-block {
+    width: 100%;
+  }
+
+  .alert-error {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #f87171;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    text-align: left;
+  }
+
+  .hidden {
+    display: none !important;
+  }
+
+  /* Dialogs */
+  .admin-dialog {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 20px;
+    background: #141418;
+    color: #f3f4f6;
+    max-width: 680px;
+    width: 92vw;
+    max-height: 90vh;
+    padding: 0;
+    margin: auto;
+    overflow-y: auto;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85);
+  }
+  .admin-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.78);
+    backdrop-filter: blur(8px);
+  }
+  .dialog-box {
+    padding: 2rem;
+  }
+  .dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+  }
+  .dialog-header h2 {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #fff;
+    margin: 0 0 0.2rem 0;
+  }
+  .dialog-subtitle {
+    font-size: 0.88rem;
+    color: rgba(255, 255, 255, 0.55);
+    margin: 0;
+  }
+  .btn-close-dialog {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 1.6rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0.25rem;
+  }
+  .btn-close-dialog:hover {
+    color: #fff;
+  }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+  .detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .detail-item.full-width {
+    grid-column: 1 / -1;
+  }
+  .detail-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.45);
+  }
+  .detail-value {
+    font-size: 0.92rem;
+    color: #fff;
+    font-weight: 500;
+  }
+  .detail-tickets-box {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 0.75rem;
+    font-size: 0.88rem;
+  }
+  .detail-code {
+    font-family: monospace;
+    font-size: 0.78rem;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.75);
+    word-break: break-all;
+  }
+  .detail-code-box {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 0.85rem;
+    font-size: 0.82rem;
+    max-height: 180px;
+    overflow-y: auto;
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  /* Questionnaire Enhancements */
+  .section-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  .q-badge-count {
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: rgba(45, 212, 191, 0.12);
+    border: 1px solid rgba(45, 212, 191, 0.25);
+    color: #2dd4bf;
+    padding: 0.15rem 0.55rem;
+    border-radius: 9999px;
+    letter-spacing: 0.03em;
+  }
+  .detail-questionnaire-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+  :global(.q-group) {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 12px;
+    padding: 1rem 1.15rem;
+  }
+  :global(.q-group-header) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  :global(.q-group-icon) {
+    font-size: 1.05rem;
+  }
+  :global(.q-group-title) {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #fff;
+  }
+  :global(.q-items-grid) {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, 1fr);
+    gap: 0.75rem;
+  }
+  :global(.q-card) {
+    background: rgba(10, 10, 12, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 8px;
+    padding: 0.75rem 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  :global(.q-card.full-width) {
+    grid-column: 1 / -1;
+  }
+  :global(.q-label) {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.45);
+  }
+  :global(.q-val) {
+    font-size: 0.9rem;
+    color: #f3f4f6;
+    line-height: 1.5;
+  }
+  :global(.q-val-text) {
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: rgba(255, 255, 255, 0.95);
+  }
+  :global(.q-pill) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    width: fit-content;
+  }
+  :global(.q-pill-yes) {
+    background: rgba(45, 212, 191, 0.15);
+    color: #2dd4bf;
+    border: 1px solid rgba(45, 212, 191, 0.35);
+  }
+  :global(.q-pill-no) {
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  :global(.q-pill-stage) {
+    background: rgba(168, 85, 247, 0.15);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.35);
+  }
+  :global(.q-pill-ticket) {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.35);
+  }
+  :global(.q-tags) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+  :global(.q-tag) {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+    font-size: 0.76rem;
+    color: rgba(255, 255, 255, 0.9);
+  }
+  :global(.q-val-highlight) {
+    font-weight: 700;
+    color: #2dd4bf;
+    font-size: 0.98rem;
+  }
+  .q-raw-toggle-wrap {
+    margin-top: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* Table questionnaire chip */
+  :global(.q-chip) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.75);
+    white-space: nowrap;
+    text-decoration: none;
+    line-height: 1.3;
+  }
+  :global(.q-chip-startup) {
+    background: rgba(168, 85, 247, 0.12);
+    border-color: rgba(168, 85, 247, 0.3);
+    color: #d8b4fe;
+  }
+  :global(.q-chip-investor) {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #93c5fd;
+  }
+</style>
+
+<script>
+  // @ts-nocheck
+  (function () {
+    const STORAGE_KEY = "soh_admin_password";
+
+    // DOM Elements
+    const lockView = document.getElementById("lockView");
+    const dashboardView = document.getElementById("dashboardView");
+    const authActions = document.getElementById("authActions");
+    const loginForm = document.getElementById("loginForm");
+    const adminPasswordInput = document.getElementById("adminPassword");
+    const authError = document.getElementById("authError");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const refreshBtn = document.getElementById("refreshBtn");
+    const exportCsvBtn = document.getElementById("exportCsvBtn");
+
+    const metricTotal = document.getElementById("metricTotal");
+    const metricPaid = document.getElementById("metricPaid");
+    const metricPending = document.getElementById("metricPending");
+    const metricRevenue = document.getElementById("metricRevenue");
+
+    const tabStatusAll = document.getElementById("tabStatusAll");
+    const tabStatusPaid = document.getElementById("tabStatusPaid");
+    const tabStatusPending = document.getElementById("tabStatusPending");
+    const countStatusAll = document.getElementById("countStatusAll");
+    const countStatusPaid = document.getElementById("countStatusPaid");
+    const countStatusPending = document.getElementById("countStatusPending");
+
+    const tabTypeAll = document.getElementById("tabTypeAll");
+    const tabTypeStartup = document.getElementById("tabTypeStartup");
+    const tabTypeInvestor = document.getElementById("tabTypeInvestor");
+    const tabTypeStudent = document.getElementById("tabTypeStudent");
+    const countTypeAll = document.getElementById("countTypeAll");
+    const countTypeStartup = document.getElementById("countTypeStartup");
+    const countTypeInvestor = document.getElementById("countTypeInvestor");
+    const countTypeStudent = document.getElementById("countTypeStudent");
+
+    const searchInput = document.getElementById("searchInput");
+    const clearSearchBtn = document.getElementById("clearSearchBtn");
+    const ticketsTbody = document.getElementById("ticketsTbody");
+
+    // Details Modal Elements
+    const detailsDialog = document.getElementById("detailsDialog");
+    const detailName = document.getElementById("detailName");
+    const detailEmail = document.getElementById("detailEmail");
+    const detailStatus = document.getElementById("detailStatus");
+    const detailAmount = document.getElementById("detailAmount");
+    const detailCompany = document.getElementById("detailCompany");
+    const detailRole = document.getElementById("detailRole");
+    const detailTickets = document.getElementById("detailTickets");
+    const detailQuestionnaire = document.getElementById("detailQuestionnaire");
+    const questionnaireSection = document.getElementById("questionnaireSection");
+    const detailQCount = document.getElementById("detailQCount");
+    const toggleRawJsonBtn = document.getElementById("toggleRawJsonBtn");
+    const rawJsonBtnText = document.getElementById("rawJsonBtnText");
+    const qRawJsonBox = document.getElementById("qRawJsonBox");
+    const detailRegId = document.getElementById("detailRegId");
+    const detailStripeSession = document.getElementById("detailStripeSession");
+    const detailCreatedAt = document.getElementById("detailCreatedAt");
+    const detailUpdatedAt = document.getElementById("detailUpdatedAt");
+
+    // Known Questionnaire Label Map
+    const QUESTION_LABELS = {
+      business_description: "What does your business do?",
+      funding_amount_needed: "Funding Looking to Raise",
+      funding_stage: "Funding Stage / Series",
+      target_vc_types: "Target VCs to Meet",
+      investor_ticket_size: "Typical Ticket Size",
+      investor_focus_industries: "Prioritized Sectors & Industries",
+      investor_lead_ok: "Open to Lead Investor?",
+      investor_global_ok: "Invest in Non-Japan Startups?",
+      investor_looking_for_lp: "Looking for LPs?",
+      lp_dinner_addon: "LP Dinner Add-on",
+    };
+
+    function formatQuestionLabel(key) {
+      if (QUESTION_LABELS[key]) return QUESTION_LABELS[key];
+      return key
+        .replace(/[_-]/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+
+    function formatQuestionValue(key, val) {
+      if (val === true || String(val).toLowerCase() === "yes") {
+        return `<span class="q-pill q-pill-yes">Yes</span>`;
+      }
+      if (val === false || String(val).toLowerCase() === "no") {
+        return `<span class="q-pill q-pill-no">No</span>`;
+      }
+      if (key === "funding_stage") {
+        return `<span class="q-pill q-pill-stage">${escapeHtml(val)}</span>`;
+      }
+      if (key === "investor_ticket_size") {
+        return `<span class="q-pill q-pill-ticket">${escapeHtml(val)}</span>`;
+      }
+      if (key === "funding_amount_needed") {
+        return `<span class="q-val-highlight">${escapeHtml(val)}</span>`;
+      }
+      if (key === "investor_focus_industries") {
+        const items = Array.isArray(val)
+          ? val
+          : String(val).split(",").map((s) => s.trim()).filter(Boolean);
+        if (items.length) {
+          return `<div class="q-tags">${items.map((i) => `<span class="q-tag">${escapeHtml(i)}</span>`).join("")}</div>`;
+        }
+      }
+      if (typeof val === "object" && val !== null) {
+        return `<pre class="detail-code-box" style="margin:0;padding:0.4rem;font-size:0.75rem;">${escapeHtml(JSON.stringify(val, null, 2))}</pre>`;
+      }
+      return `<div class="q-val-text">${escapeHtml(String(val))}</div>`;
+    }
+
+    function renderQuestionnaire(q) {
+      if (!q || typeof q !== "object") return "";
+
+      const entries = Object.entries(q).filter(
+        ([_, v]) => v !== null && v !== undefined && v !== ""
+      );
+      if (!entries.length) return "";
+
+      const STARTUP_KEYS = [
+        "business_description",
+        "funding_stage",
+        "funding_amount_needed",
+        "target_vc_types",
+      ];
+      const INVESTOR_KEYS = [
+        "investor_ticket_size",
+        "investor_focus_industries",
+        "investor_lead_ok",
+        "investor_global_ok",
+        "investor_looking_for_lp",
+        "lp_dinner_addon",
+      ];
+
+      const startupItems = [];
+      const investorItems = [];
+      const otherItems = [];
+
+      for (const [key, value] of entries) {
+        if (STARTUP_KEYS.includes(key)) {
+          startupItems.push([key, value]);
+        } else if (INVESTOR_KEYS.includes(key)) {
+          investorItems.push([key, value]);
+        } else {
+          otherItems.push([key, value]);
+        }
+      }
+
+      function renderGroup(title, items) {
+        if (!items.length) return "";
+        let groupHtml = `
+          <div class="q-group">
+            <div class="q-group-header">
+              <span class="q-group-title">${escapeHtml(title)}</span>
+            </div>
+            <div class="q-items-grid">
+        `;
+
+        for (const [k, v] of items) {
+          const label = formatQuestionLabel(k);
+          const isFull =
+            k === "business_description" ||
+            k === "target_vc_types" ||
+            k === "investor_focus_industries" ||
+            (typeof v === "string" && v.length > 50);
+
+          groupHtml += `
+            <div class="q-card ${isFull ? "full-width" : ""}">
+              <span class="q-label">${escapeHtml(label)}</span>
+              <div class="q-val">${formatQuestionValue(k, v)}</div>
+            </div>
+          `;
+        }
+
+        groupHtml += `</div></div>`;
+        return groupHtml;
+      }
+
+      let html = "";
+      if (startupItems.length) {
+        html += renderGroup("Startup Profile", startupItems);
+      }
+      if (investorItems.length) {
+        html += renderGroup("Investor Profile", investorItems);
+      }
+      if (otherItems.length) {
+        html += renderGroup("Additional Responses", otherItems);
+      }
+
+      return html;
+    }
+
+    // In-memory data
+    let registrationsCache = [];
+    let currentStatusFilter = "all"; // "all" | "paid" | "pending"
+    let currentTypeFilter = "all"; // "all" | "startup" | "investor" | "student"
+    let currentSearch = "";
+
+    function getStoredPassword() {
+      return sessionStorage.getItem(STORAGE_KEY) || "";
+    }
+
+    function getApiUrl(path) {
+      const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      if (isLocal && window.location.port !== "8787") {
+        return `http://${window.location.hostname}:8787${path}`;
+      }
+      return path;
+    }
+
+    function escapeHtml(str) {
+      return String(str || "").replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      })[c]);
+    }
+
+    function formatRelativeTime(date) {
+      const now = new Date();
+      const diffMs = now - date;
+      const diffSec = Math.floor(diffMs / 1000);
+      if (diffSec < 60) return "just now";
+      const diffMin = Math.floor(diffSec / 60);
+      if (diffMin < 60) return `${diffMin}m ago`;
+      const diffHour = Math.floor(diffMin / 60);
+      if (diffHour < 24) return `${diffHour}h ago`;
+      const diffDay = Math.floor(diffHour / 24);
+      if (diffDay < 30) return `${diffDay}d ago`;
+      return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    }
+
+    function formatAmount(amount, currency = "jpy") {
+      const num = Number(amount || 0);
+      const code = String(currency || "jpy").toLowerCase();
+      if (code === "jpy") {
+        return `¥${Math.round(num).toLocaleString("en-US")} JPY`;
+      }
+      if (code === "usd") {
+        return `$${num.toLocaleString("en-US")} USD`;
+      }
+      if (code === "eur") {
+        return `€${num.toLocaleString("en-US")} EUR`;
+      }
+      return `${num.toLocaleString("en-US")} ${code.toUpperCase()}`;
+    }
+
+    function formatTicketsSummary(tickets) {
+      if (!tickets) return '<span style="color:rgba(255,255,255,0.35);">—</span>';
+
+      // If array of line items: [{ description, quantity }]
+      if (Array.isArray(tickets)) {
+        if (!tickets.length) return '<span style="color:rgba(255,255,255,0.35);">—</span>';
+        return tickets.map((t) => {
+          const name = escapeHtml(t.description || "Ticket");
+          const q = Number(t.quantity || 1);
+          return `<span class="ticket-tag">${name} <span class="ticket-tag-strong">×${q}</span></span>`;
+        }).join(" ");
+      }
+
+      // If object of quantities: { startup: 1, investor: 2 }
+      if (typeof tickets === "object") {
+        const ticketNames = {
+          startup: "Startup",
+          investor: "Investor",
+          student: "Student",
+          test_taro: "Test (Taro)",
+          lpDinner: "LP Dinner",
+        };
+        const items = [];
+        for (const [key, val] of Object.entries(tickets)) {
+          const count = Number(val || 0);
+          if (count > 0) {
+            const label = ticketNames[key] || key.charAt(0).toUpperCase() + key.slice(1);
+            items.push(`<span class="ticket-tag">${label} <span class="ticket-tag-strong">×${count}</span></span>`);
+          }
+        }
+        if (items.length) return items.join(" ");
+      }
+
+      return '<span style="color:rgba(255,255,255,0.35);">—</span>';
+    }
+
+    function showDashboard() {
+      lockView.classList.add("hidden");
+      dashboardView.classList.remove("hidden");
+      authActions.classList.remove("hidden");
+      loadRegistrations();
+    }
+
+    function showLock() {
+      lockView.classList.remove("hidden");
+      dashboardView.classList.add("hidden");
+      authActions.classList.add("hidden");
+      sessionStorage.removeItem(STORAGE_KEY);
+      adminPasswordInput.value = "";
+    }
+
+    // Login Form Submit
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      authError.classList.add("hidden");
+      const password = adminPasswordInput.value.trim();
+
+      try {
+        const res = await fetch(getApiUrl("/api/admin/verify"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Authentication failed");
+        }
+
+        sessionStorage.setItem(STORAGE_KEY, password);
+        showDashboard();
+      } catch (err) {
+        let msg = err.message || "Invalid password";
+        const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+        if (err.name === "TypeError" && isLocal && window.location.port === "4321") {
+          msg = "Cannot connect to Cloudflare Functions on port 8787. Please ensure 'npm run dev:functions' is running.";
+        }
+        authError.textContent = msg;
+        authError.classList.remove("hidden");
+      }
+    });
+
+    logoutBtn.addEventListener("click", showLock);
+    refreshBtn.addEventListener("click", () => loadRegistrations());
+
+    // Load registrations from API
+    async function loadRegistrations() {
+      const password = getStoredPassword();
+      if (!password) return showLock();
+
+      ticketsTbody.innerHTML = `
+        <tr><td colspan="7" class="table-empty-cell">Loading registrations...</td></tr>
+      `;
+
+      try {
+        const res = await fetch(getApiUrl("/api/admin/tickets"), {
+          headers: {
+            Authorization: `Bearer ${password}`,
+            "X-Admin-Password": password,
+          },
+        });
+
+        if (res.status === 401) {
+          return showLock();
+        }
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to load registrations");
+        }
+
+        registrationsCache = data.registrations || [];
+        updateMetricsAndFilterCounts();
+        renderTable();
+      } catch (err) {
+        ticketsTbody.innerHTML = `
+          <tr><td colspan="7" class="table-empty-cell" style="color:#f87171;">Error: ${escapeHtml(err.message)}</td></tr>
+        `;
+      }
+    }
+
+    function hasTicketType(reg, type) {
+      const target = String(type || "").toLowerCase().trim();
+      if (!target || target === "all") return true;
+
+      const tickets = reg?.tickets;
+      if (Array.isArray(tickets)) {
+        const match = tickets.some((t) => {
+          const desc = String(t.description || t.name || "").toLowerCase();
+          return desc.includes(target) && Number(t.quantity || 1) > 0;
+        });
+        if (match) return true;
+      } else if (tickets && typeof tickets === "object") {
+        for (const [key, count] of Object.entries(tickets)) {
+          if (key.toLowerCase().includes(target) && Number(count) > 0) {
+            return true;
+          }
+        }
+      }
+
+      // Fallback check on questionnaire fields
+      const q = reg?.questionnaire;
+      if (q && typeof q === "object") {
+        if (target === "startup" && (q.funding_stage || q.business_description || q.funding_amount_needed)) {
+          return true;
+        }
+        if (target === "investor" && (q.investor_ticket_size || q.investor_focus_industries || q.investor_lead_ok)) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    function updateMetricsAndFilterCounts() {
+      const total = registrationsCache.length;
+      let paidCount = 0;
+      let pendingCount = 0;
+      let paidRevenue = 0;
+
+      let startupCount = 0;
+      let investorCount = 0;
+      let studentCount = 0;
+
+      for (const reg of registrationsCache) {
+        const status = (reg.payment_status || "pending").toLowerCase();
+        if (status === "paid") {
+          paidCount++;
+          paidRevenue += Number(reg.total_amount || 0);
+        } else if (status === "pending") {
+          pendingCount++;
+        }
+
+        if (hasTicketType(reg, "startup")) startupCount++;
+        if (hasTicketType(reg, "investor")) investorCount++;
+        if (hasTicketType(reg, "student")) studentCount++;
+      }
+
+      metricTotal.textContent = total.toLocaleString("en-US");
+      metricPaid.textContent = paidCount.toLocaleString("en-US");
+      metricPending.textContent = pendingCount.toLocaleString("en-US");
+      metricRevenue.textContent = `¥${Math.round(paidRevenue).toLocaleString("en-US")}`;
+
+      countStatusAll.textContent = total;
+      countStatusPaid.textContent = paidCount;
+      countStatusPending.textContent = pendingCount;
+
+      countTypeAll.textContent = total;
+      countTypeStartup.textContent = startupCount;
+      countTypeInvestor.textContent = investorCount;
+      countTypeStudent.textContent = studentCount;
+    }
+
+    // Status filter tabs click handlers
+    const statusTabs = [tabStatusAll, tabStatusPaid, tabStatusPending];
+    statusTabs.forEach((tab) => {
+      if (!tab) return;
+      tab.addEventListener("click", () => {
+        statusTabs.forEach((t) => t.classList.remove("active"));
+        tab.classList.add("active");
+        currentStatusFilter = tab.dataset.status;
+        renderTable();
+      });
+    });
+
+    // Ticket type filter tabs click handlers
+    const typeTabs = [tabTypeAll, tabTypeStartup, tabTypeInvestor, tabTypeStudent];
+    typeTabs.forEach((tab) => {
+      if (!tab) return;
+      tab.addEventListener("click", () => {
+        typeTabs.forEach((t) => t.classList.remove("active"));
+        tab.classList.add("active");
+        currentTypeFilter = tab.dataset.type;
+        renderTable();
+      });
+    });
+
+    // Search input handler
+    searchInput.addEventListener("input", () => {
+      currentSearch = searchInput.value.trim().toLowerCase();
+      clearSearchBtn.classList.toggle("hidden", !currentSearch);
+      renderTable();
+    });
+
+    clearSearchBtn.addEventListener("click", () => {
+      searchInput.value = "";
+      currentSearch = "";
+      clearSearchBtn.classList.add("hidden");
+      renderTable();
+    });
+
+    function getFilteredRegistrations() {
+      return registrationsCache.filter((reg) => {
+        const status = (reg.payment_status || "pending").toLowerCase();
+
+        // 1. Status Filter
+        if (currentStatusFilter === "paid" && status !== "paid") return false;
+        if (currentStatusFilter === "pending" && status !== "pending") return false;
+
+        // 2. Ticket Type Filter
+        if (currentTypeFilter !== "all" && !hasTicketType(reg, currentTypeFilter)) {
+          return false;
+        }
+
+        // 3. Search Filter
+        if (currentSearch) {
+          const name = String(reg.full_name || "").toLowerCase();
+          const email = String(reg.email || "").toLowerCase();
+          const company = String(reg.company || "").toLowerCase();
+          const role = String(reg.role || "").toLowerCase();
+          const stripeId = String(reg.stripe_session_id || "").toLowerCase();
+          const ticketsText = JSON.stringify(reg.tickets || {}).toLowerCase();
+          const qText = JSON.stringify(reg.questionnaire || {}).toLowerCase();
+
+          const matches =
+            name.includes(currentSearch) ||
+            email.includes(currentSearch) ||
+            company.includes(currentSearch) ||
+            role.includes(currentSearch) ||
+            stripeId.includes(currentSearch) ||
+            ticketsText.includes(currentSearch) ||
+            qText.includes(currentSearch);
+
+          if (!matches) return false;
+        }
+
+        return true;
+      });
+    }
+
+    function renderTable() {
+      const filtered = getFilteredRegistrations();
+
+      if (!filtered.length) {
+        let msg = "No registrations match your current filters.";
+        if (currentSearch) {
+          msg = "No registrations match your search query.";
+        }
+        ticketsTbody.innerHTML = `<tr><td colspan="7" class="table-empty-cell">${escapeHtml(msg)}</td></tr>`;
+        return;
+      }
+
+      ticketsTbody.innerHTML = filtered.map((reg) => {
+        const status = (reg.payment_status || "pending").toLowerCase();
+        let badgeClass = "status-pending";
+        let badgeText = "Pending";
+
+        if (status === "paid") {
+          badgeClass = "status-paid";
+          badgeText = "Paid";
+        } else if (status === "failed" || status === "canceled") {
+          badgeClass = "status-failed";
+          badgeText = status;
+        }
+
+        const date = reg.created_at ? new Date(reg.created_at) : null;
+        const formattedDate = date
+          ? date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+          : "—";
+        const relativeDate = date ? formatRelativeTime(date) : "";
+
+        const safeName = escapeHtml(reg.full_name || "Unnamed Attendee");
+        const safeEmail = escapeHtml(reg.email || "");
+        const safeCompany = escapeHtml(reg.company || "—");
+        const safeRole = escapeHtml(reg.role || "");
+        const ticketsHtml = formatTicketsSummary(reg.tickets);
+        const amountDisplay = formatAmount(reg.total_amount, reg.currency);
+
+        // Questionnaire teaser badge in Company column (no emojis)
+        let qTeaserHtml = "";
+        const q = reg.questionnaire;
+        if (q && typeof q === "object") {
+          const hasAny = Object.values(q).some((v) => v !== null && v !== "" && v !== undefined);
+          if (hasAny) {
+            if (q.funding_stage) {
+              qTeaserHtml = `<span class="q-chip q-chip-startup" title="${escapeHtml(q.business_description || 'Startup Profile')}">${escapeHtml(q.funding_stage)}</span>`;
+            } else if (q.investor_ticket_size) {
+              qTeaserHtml = `<span class="q-chip q-chip-investor" title="${escapeHtml(q.investor_focus_industries || 'Investor Profile')}">${escapeHtml(q.investor_ticket_size)}</span>`;
+            } else {
+              qTeaserHtml = `<span class="q-chip" title="Questionnaire answered">Q&A</span>`;
+            }
+          }
+        }
+
+        return `
+          <tr data-id="${escapeHtml(reg.id)}">
+            <td><span class="status-badge ${badgeClass}">${badgeText}</span></td>
+            <td>
+              <span class="attendee-name">${safeName}</span>
+              ${safeEmail ? `<a href="mailto:${safeEmail}" class="attendee-email">${safeEmail}</a>` : ""}
+            </td>
+            <td>
+              <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
+                <span class="company-name">${safeCompany}</span>
+                ${qTeaserHtml}
+              </div>
+              ${safeRole ? `<span class="role-name">${safeRole}</span>` : ""}
+            </td>
+            <td>
+              <div class="tickets-summary">${ticketsHtml}</div>
+            </td>
+            <td class="amount-cell">${escapeHtml(amountDisplay)}</td>
+            <td class="date-cell">
+              <span>${escapeHtml(formattedDate)}</span>
+              ${relativeDate ? `<span class="date-relative">${escapeHtml(relativeDate)}</span>` : ""}
+            </td>
+            <td style="text-align:right;">
+              <button type="button" class="btn btn-ghost btn-sm view-details-btn" data-id="${escapeHtml(reg.id)}" title="View full registration details">
+                Details
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      // Bind Details buttons
+      ticketsTbody.querySelectorAll(".view-details-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const regId = btn.dataset.id;
+          const reg = registrationsCache.find((r) => r.id === regId);
+          if (reg) openDetailsModal(reg);
+        });
+      });
+    }
+
+    function openDetailsModal(reg) {
+      detailName.textContent = reg.full_name || "Unnamed Attendee";
+      detailEmail.textContent = reg.email || "No email provided";
+
+      const status = (reg.payment_status || "pending").toLowerCase();
+      let badgeClass = status === "paid" ? "status-paid" : "status-pending";
+      detailStatus.innerHTML = `<span class="status-badge ${badgeClass}">${status.toUpperCase()}</span>`;
+
+      detailAmount.textContent = formatAmount(reg.total_amount, reg.currency);
+      detailCompany.textContent = reg.company || "—";
+      detailRole.textContent = reg.role || "—";
+      detailTickets.innerHTML = formatTicketsSummary(reg.tickets);
+
+      detailRegId.textContent = reg.id || "—";
+      detailStripeSession.textContent = reg.stripe_session_id || "None (pre-checkout or offline)";
+      detailCreatedAt.textContent = reg.created_at ? new Date(reg.created_at).toLocaleString() : "—";
+      detailUpdatedAt.textContent = reg.updated_at ? new Date(reg.updated_at).toLocaleString() : "—";
+
+      // Questionnaire Responses
+      const q = reg.questionnaire;
+      const qHtml = renderQuestionnaire(q);
+      if (qHtml) {
+        questionnaireSection.classList.remove("hidden");
+        detailQuestionnaire.innerHTML = qHtml;
+        const count = Object.values(q).filter((v) => v !== null && v !== "" && v !== undefined).length;
+        detailQCount.textContent = `${count} answered`;
+        qRawJsonBox.textContent = JSON.stringify(q, null, 2);
+        qRawJsonBox.classList.add("hidden");
+        rawJsonBtnText.textContent = "Show Raw JSON";
+      } else {
+        questionnaireSection.classList.add("hidden");
+      }
+
+      detailsDialog.showModal();
+    }
+
+    // Toggle Raw JSON
+    if (toggleRawJsonBtn) {
+      toggleRawJsonBtn.addEventListener("click", () => {
+        const isHidden = qRawJsonBox.classList.toggle("hidden");
+        rawJsonBtnText.textContent = isHidden ? "Show Raw JSON" : "Hide Raw JSON";
+      });
+    }
+
+    // Dialog close buttons
+    document.querySelectorAll("[data-action='close-dialog']").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        detailsDialog.close();
+      });
+    });
+
+    detailsDialog.addEventListener("click", (e) => {
+      if (e.target === detailsDialog) {
+        detailsDialog.close();
+      }
+    });
+
+    // CSV Export
+    exportCsvBtn.addEventListener("click", () => {
+      const records = getFilteredRegistrations();
+      if (!records.length) {
+        alert("No records to export.");
+        return;
+      }
+
+      const headers = [
+        "Registration ID",
+        "Payment Status",
+        "Full Name",
+        "Email",
+        "Company",
+        "Role",
+        "Total Amount",
+        "Currency",
+        "Tickets",
+        "Stripe Session ID",
+        "Created At",
+      ];
+
+      const csvRows = [headers.join(",")];
+
+      for (const r of records) {
+        const ticketsStr = JSON.stringify(r.tickets || "").replace(/"/g, '""');
+        const row = [
+          `"${r.id || ""}"`,
+          `"${r.payment_status || "pending"}"`,
+          `"${(r.full_name || "").replace(/"/g, '""')}"`,
+          `"${(r.email || "").replace(/"/g, '""')}"`,
+          `"${(r.company || "").replace(/"/g, '""')}"`,
+          `"${(r.role || "").replace(/"/g, '""')}"`,
+          r.total_amount || 0,
+          `"${r.currency || "jpy"}"`,
+          `"${ticketsStr}"`,
+          `"${r.stripe_session_id || ""}"`,
+          `"${r.created_at || ""}"`,
+        ];
+        csvRows.push(row.join(","));
+      }
+
+      const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `tickets-${currentStatusFilter}-${currentTypeFilter}-${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    });
+
+    // Init: Auto check if password already in session
+    const saved = getStoredPassword();
+    if (saved) {
+      showDashboard();
+    } else {
+      showLock();
+    }
+  })();
+</script>
