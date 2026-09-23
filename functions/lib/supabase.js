@@ -166,6 +166,84 @@ export async function recordPaidRegistration(env, session, lineItems = [], fetch
 }
 
 /**
+ * Lists registrations ordered by creation time descending.
+/**
+ * Checks whether a registration contains a specific ticket type ('startup', 'investor', 'student').
+ */
+export function hasTicketType(reg, type) {
+  const target = String(type || "").toLowerCase().trim();
+  if (!target || target === "all") return true;
+
+  const tickets = reg?.tickets;
+  if (Array.isArray(tickets)) {
+    const match = tickets.some((t) => {
+      const desc = String(t.description || t.name || "").toLowerCase();
+      return desc.includes(target) && Number(t.quantity || 1) > 0;
+    });
+    if (match) return true;
+  } else if (tickets && typeof tickets === "object") {
+    for (const [key, count] of Object.entries(tickets)) {
+      if (key.toLowerCase().includes(target) && Number(count) > 0) {
+        return true;
+      }
+    }
+  }
+
+  // Fallback check on questionnaire fields
+  const q = reg?.questionnaire;
+  if (q && typeof q === "object") {
+    if (target === "startup" && (q.funding_stage || q.business_description || q.funding_amount_needed)) {
+      return true;
+    }
+    if (target === "investor" && (q.investor_ticket_size || q.investor_focus_industries || q.investor_lead_ok)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Lists registrations ordered by creation time descending.
+ * Optionally filters by payment_status (e.g. 'pending', 'paid') and ticket type.
+ */
+export async function listRegistrations(env, options = {}, fetchFn = fetch) {
+  const config = getSupabaseConfig(env);
+  if (!config) return [];
+
+  const status = typeof options === "string" ? options : options?.status;
+  const type = typeof options === "object" ? options?.type : null;
+  let query = `${config.url}/rest/v1/registrations?order=created_at.desc`;
+
+  if (status && status !== "all") {
+    query += `&payment_status=eq.${encodeURIComponent(status.trim().toLowerCase())}`;
+  }
+
+  try {
+    const res = await fetchFn(query, {
+      method: "GET",
+      headers: getHeaders(config.key),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn(`[Supabase] List registrations returned ${res.status}: ${errText}`);
+      return [];
+    }
+
+    const rows = await res.json();
+    let results = Array.isArray(rows) ? rows : [];
+    if (type && type !== "all") {
+      results = results.filter((r) => hasTicketType(r, type));
+    }
+    return results;
+  } catch (err) {
+    console.warn("[Supabase] Failed to list registrations:", err.message);
+    return [];
+  }
+}
+
+/**
  * Creates a custom sponsor link record.
  */
 export async function createSponsor(env, data, fetchFn = fetch) {
