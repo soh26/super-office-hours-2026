@@ -23,6 +23,11 @@ import {
 import { onRequestPost as createSponsorCheckoutPost } from "../functions/api/create-sponsor-checkout.js";
 import { onRequest as middlewareHandle } from "../functions/_middleware.js";
 import { sendSponsorConfirmation } from "../functions/api/stripe-webhook.js";
+import {
+  lookupJapanPostalCode,
+  lookupJapanCoordinates,
+  resolveDetailedLocation,
+} from "../functions/lib/japan-location.js";
 
 describe("Sponsor Email Helper (functions/lib/email.js)", () => {
   test("buildSponsorEmail renders without implicit addons when no perks are provided", () => {
@@ -927,14 +932,14 @@ describe("Sponsor Access Logs & Geolocation (Timestamp & City)", () => {
     );
 
     assert.equal(result.success, true);
-    assert.equal(result.city, "Tokyo");
+    assert.equal(result.city, "Tokyo, Japan (東京都)");
     assert.equal(result.timestamp, "2026-09-22T09:00:00Z");
 
     // Verify insert into sponsor_views table
     assert.ok(capturedViewsPost);
     assert.equal(capturedViewsPost.sponsor_id, "sp-geo-1");
     assert.equal(capturedViewsPost.sponsor_slug, "geo-sponsor");
-    assert.equal(capturedViewsPost.city, "Tokyo");
+    assert.equal(capturedViewsPost.city, "Tokyo, Japan (東京都)");
     assert.equal(capturedViewsPost.country, "JP");
     assert.equal(capturedViewsPost.viewed_at, "2026-09-22T09:00:00Z");
 
@@ -942,7 +947,7 @@ describe("Sponsor Access Logs & Geolocation (Timestamp & City)", () => {
     assert.ok(capturedSponsorPatch);
     assert.equal(capturedSponsorPatch.metadata.view_count, 3);
     assert.equal(capturedSponsorPatch.metadata.views.length, 2);
-    assert.equal(capturedSponsorPatch.metadata.views[0].city, "Tokyo");
+    assert.equal(capturedSponsorPatch.metadata.views[0].city, "Tokyo, Japan (東京都)");
     assert.equal(capturedSponsorPatch.metadata.views[0].timestamp, "2026-09-22T09:00:00Z");
   });
 
@@ -1036,7 +1041,7 @@ describe("Sponsor Access Logs & Geolocation (Timestamp & City)", () => {
 
       const res = await middlewareHandle(context);
       assert.equal(res.status, 200);
-      assert.equal(loggedCity, "Kyoto");
+      assert.equal(loggedCity, "Kyoto, Kyoto (京都府京都市)");
     } finally {
       globalThis.fetch = originalFetch;
     }
@@ -1152,5 +1157,144 @@ describe("Sponsor Access Logs & Geolocation (Timestamp & City)", () => {
     }
   });
 });
+
+describe("Japan Geolocation & Fine-grained Location Extraction (functions/lib/japan-location.js)", () => {
+  const env = {
+    SUPABASE_URL: "https://test.supabase.co",
+    SUPABASE_SECRET_KEY: "test-secret-key",
+  };
+
+  test("lookupJapanPostalCode resolves 7-digit postal code to ward/city and town", async () => {
+    const mockFetch = async (url) => {
+      if (url.includes("1500002")) {
+        return new Response(
+          JSON.stringify({
+            status: 200,
+            results: [
+              {
+                address1: "東京都",
+                address2: "渋谷区",
+                address3: "渋谷",
+                prefcode: "13",
+                zipcode: "1500002",
+              },
+            ],
+          }),
+          { status: 200 }
+        );
+      }
+      return new Response("Not found", { status: 404 });
+    };
+
+    const res = await lookupJapanPostalCode("150-0002", mockFetch);
+    assert.ok(res);
+    assert.equal(res.prefecture, "東京都");
+    assert.equal(res.cityWard, "渋谷区");
+    assert.equal(res.town, "渋谷");
+    assert.equal(res.display, "Shibuya Ward, Tokyo (東京都渋谷区渋谷)");
+  });
+
+  test("lookupJapanCoordinates resolves lat/lon via GSI API to municipality and town", async () => {
+    const mockFetch = async (url) => {
+      if (url.includes("lat=35.658&lon=139.7016")) {
+        return new Response(
+          JSON.stringify({
+            results: {
+              muniCd: "13113",
+              lv01Nm: "渋谷二丁目",
+            },
+          }),
+          { status: 200 }
+        );
+      }
+      return new Response("Not found", { status: 404 });
+    };
+
+    const res = await lookupJapanCoordinates(35.658, 139.7016, mockFetch, { includeMicroStreet: true });
+    assert.ok(res);
+    assert.equal(res.muniCd, "13113");
+    assert.equal(res.town, "渋谷二丁目");
+    assert.equal(res.display, "Shibuya Ward, Tokyo (東京都渋谷区 渋谷二丁目)");
+  });
+
+  test("resolveDetailedLocation extracts ward from neighborhood alias", async () => {
+    const resRoppongi = await resolveDetailedLocation({ city: "Roppongi", country: "JP" });
+    assert.equal(resRoppongi.isJapan, true);
+    assert.equal(resRoppongi.resolvedCity, "Minato Ward, Tokyo (東京都港区六本木)");
+
+    const resShibuya = await resolveDetailedLocation({ city: "Shibuya", country: "JP" });
+    assert.equal(resShibuya.isJapan, true);
+    assert.equal(resShibuya.resolvedCity, "Shibuya Ward, Tokyo (東京都渋谷区)");
+  });
+
+  test("resolveDetailedLocation passes through non-Japan locations cleanly without alteration", async () => {
+    const resUS = await resolveDetailedLocation({ city: "San Francisco", country: "US" });
+    assert.equal(resUS.isJapan, false);
+    assert.equal(resUS.resolvedCity, "San Francisco");
+    assert.equal(resUS.country, "US");
+
+    const resUK = await resolveDetailedLocation({ city: "London", country: "GB" });
+    assert.equal(resUK.isJapan, false);
+    assert.equal(resUK.resolvedCity, "London");
+    assert.equal(resUK.country, "GB");
+  });
+
+  test("recordSponsorView resolves postal code or coordinates into database and metadata", async () => {
+    let capturedViewsPost = null;
+
+    const mockFetch = async (url, options) => {
+      if (url.includes("zipcloud.ibsnet.co.jp")) {
+        return new Response(
+          JSON.stringify({
+            status: 200,
+            results: [
+              {
+                address1: "東京都",
+                address2: "港区",
+                address3: "芝公園",
+                prefcode: "13",
+                zipcode: "1050011",
+              },
+            ],
+          }),
+          { status: 200 }
+        );
+      }
+      if (url.includes("/rest/v1/sponsor_views")) {
+        capturedViewsPost = JSON.parse(options.body);
+        return new Response(JSON.stringify([{ id: "view-japan-1" }]), { status: 201 });
+      }
+      if (url.includes("/rest/v1/sponsors?id=eq.sp-jp-1")) {
+        return new Response(JSON.stringify([{ id: "sp-jp-1" }]), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    };
+
+    const mockSponsor = {
+      id: "sp-jp-1",
+      slug: "japan-sponsor",
+      metadata: { views: [] },
+    };
+
+    const result = await recordSponsorView(
+      env,
+      {
+        sponsor: mockSponsor,
+        sponsorId: "sp-jp-1",
+        slug: "japan-sponsor",
+        postalCode: "1050011",
+        country: "JP",
+        timestamp: "2026-09-23T10:00:00Z",
+      },
+      mockFetch
+    );
+
+    assert.equal(result.success, true);
+    assert.equal(result.city, "Minato Ward, Tokyo (東京都港区芝公園)");
+    assert.equal(capturedViewsPost.city, "Minato Ward, Tokyo (東京都港区芝公園)");
+    assert.equal(capturedViewsPost.country, "JP");
+  });
+});
+
 
 
