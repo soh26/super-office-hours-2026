@@ -43,11 +43,16 @@ async function renderSponsorPage(context, slug, url) {
     });
   }
 
-  // Collect access log: timestamp & city (from Cloudflare cf object or headers)
+  // Collect access log: timestamp & location (from Cloudflare cf object or headers)
   const timestamp = new Date().toISOString();
   const cf = context.request.cf || {};
   const city = (cf.city || context.request.headers.get("cf-ipcity") || context.request.headers.get("x-city") || "Unknown").trim();
   const country = (cf.country || context.request.headers.get("cf-ipcountry") || context.request.headers.get("x-country") || "").trim();
+  const postalCode = (cf.postalCode || context.request.headers.get("cf-postal-code") || "").trim();
+  const latitude = cf.latitude || context.request.headers.get("cf-iplatitude") || "";
+  const longitude = cf.longitude || context.request.headers.get("cf-iplongitude") || "";
+  const region = (cf.region || context.request.headers.get("cf-region") || "").trim();
+  const regionCode = (cf.regionCode || context.request.headers.get("cf-region-code") || "").trim();
   const userAgent = context.request.headers.get("user-agent") || "";
 
   const logPromise = recordSponsorView(context.env, {
@@ -56,6 +61,11 @@ async function renderSponsorPage(context, slug, url) {
     slug: sponsor.slug,
     city,
     country,
+    postalCode,
+    latitude,
+    longitude,
+    region,
+    regionCode,
     timestamp,
     userAgent,
   }).catch((err) => {

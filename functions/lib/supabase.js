@@ -2,6 +2,7 @@
  * Lightweight fetch-based Supabase client for Cloudflare Pages Functions
  * Works natively in edge runtime with zero external dependencies.
  */
+import { resolveDetailedLocation } from "./japan-location.js";
 
 function getSupabaseConfig(env) {
   const url = (env.SUPABASE_URL || "").trim().replace(/\/+$/, "");
@@ -447,22 +448,56 @@ export async function deletePendingSponsor(env, id, fetchFn = fetch) {
  */
 export async function recordSponsorView(
   env,
-  { sponsor, sponsorId, slug, city, country, timestamp, userAgent },
+  {
+    sponsor,
+    sponsorId,
+    slug,
+    city,
+    country,
+    region,
+    regionCode,
+    postalCode,
+    latitude,
+    longitude,
+    timestamp,
+    userAgent,
+  },
   fetchFn = fetch
 ) {
   const config = getSupabaseConfig(env);
   const now = timestamp || new Date().toISOString();
-  const cleanCity = (city && String(city).trim()) || "Unknown";
-  const cleanCountry = (country && String(country).trim()) || null;
   const cleanSlug = String(slug || (sponsor && sponsor.slug) || "").trim().toLowerCase();
   const targetId = sponsorId || (sponsor && sponsor.id) || null;
+
+  // Resolve detailed location (especially ward/city/town for Japan)
+  let resolvedCity = (city && String(city).trim()) || "Unknown";
+  let resolvedCountry = (country && String(country).trim()) || null;
+
+  try {
+    const loc = await resolveDetailedLocation({
+      city: resolvedCity,
+      country: resolvedCountry,
+      region,
+      regionCode,
+      postalCode,
+      latitude,
+      longitude,
+      fetchFn,
+    });
+    if (loc && loc.resolvedCity) {
+      resolvedCity = loc.resolvedCity;
+      resolvedCountry = loc.country || resolvedCountry;
+    }
+  } catch (locErr) {
+    console.warn("[SponsorView] Location resolution error:", locErr.message);
+  }
 
   // 1. Structured log
   console.log(
     `[SponsorAccessLog] ${JSON.stringify({
       slug: cleanSlug,
-      city: cleanCity,
-      country: cleanCountry,
+      city: resolvedCity,
+      country: resolvedCountry,
       timestamp: now,
     })}`
   );
@@ -474,8 +509,8 @@ export async function recordSponsorView(
     const logPayload = {
       sponsor_id: targetId,
       sponsor_slug: cleanSlug,
-      city: cleanCity,
-      country: cleanCountry,
+      city: resolvedCity,
+      country: resolvedCountry,
       viewed_at: now,
       user_agent: userAgent || null,
     };
@@ -504,8 +539,8 @@ export async function recordSponsorView(
       const updatedViews = [
         {
           timestamp: now,
-          city: cleanCity,
-          country: cleanCountry,
+          city: resolvedCity,
+          country: resolvedCountry,
         },
         ...existingViews,
       ].slice(0, 100);
@@ -531,7 +566,7 @@ export async function recordSponsorView(
     console.warn("[Supabase] Failed to update sponsor views metadata:", err.message);
   }
 
-  return { success: true, timestamp: now, city: cleanCity, country: cleanCountry };
+  return { success: true, timestamp: now, city: resolvedCity, country: resolvedCountry };
 }
 
 /**
