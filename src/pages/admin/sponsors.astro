@@ -1531,7 +1531,14 @@ import Layout from "../../layouts/Layout.astro";
         const formattedDate = isNaN(d.getTime()) ? (v.timestamp || "-") : d.toLocaleString();
         const rel = isNaN(d.getTime()) ? "" : formatRelativeTime(d);
         const cityStr = v.city || "Unknown";
-        const locationStr = v.country ? `${cityStr}, ${v.country}` : cityStr;
+        let locationStr = cityStr;
+        if (v.country && cityStr !== "Unknown") {
+          if (cityStr.includes("(") || cityStr.includes("（")) {
+            locationStr = cityStr;
+          } else {
+            locationStr = `${cityStr}, ${v.country}`;
+          }
+        }
 
         return `
           <tr>
