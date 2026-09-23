@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { listRegistrations } from "../functions/lib/supabase.js";
+import { getRegistrationTicketCounts, hasTicketType, listRegistrations } from "../functions/lib/supabase.js";
 import { onRequestGet as adminTicketsGet, onRequestOptions as adminTicketsOptions } from "../functions/api/admin/tickets.js";
 
 describe("Ticket Registrations Admin & Supabase Integration", () => {
@@ -390,6 +390,132 @@ describe("Ticket Registrations Admin & Supabase Integration", () => {
       } finally {
         globalThis.fetch = originalFetch;
       }
+    });
+  });
+
+  describe("Ticket Quantity Counting (getRegistrationTicketCounts & Metrics)", () => {
+    it("accurately counts ticket quantities from an object representation", () => {
+      const reg = {
+        tickets: { startup: 3, investor: 2, student: 0 },
+      };
+      const counts = getRegistrationTicketCounts(reg);
+      assert.equal(counts.startup, 3);
+      assert.equal(counts.investor, 2);
+      assert.equal(counts.student, 0);
+      assert.equal(counts.other, 0);
+      assert.equal(counts.total, 5);
+    });
+
+    it("accurately counts ticket quantities from a Stripe line items array", () => {
+      const reg = {
+        tickets: [
+          { description: "Startup ticket", quantity: 2 },
+          { description: "Investor ticket", quantity: 1 },
+          { description: "LP Dinner", quantity: 1 }, // add-on, not main ticket
+        ],
+      };
+      const counts = getRegistrationTicketCounts(reg);
+      assert.equal(counts.startup, 2);
+      assert.equal(counts.investor, 1);
+      assert.equal(counts.student, 0);
+      assert.equal(counts.other, 0);
+      assert.equal(counts.total, 3);
+    });
+
+    it("falls back to startup ticket when tickets is missing but startup questionnaire is answered", () => {
+      const reg = {
+        tickets: null,
+        questionnaire: {
+          funding_stage: "Seed",
+          business_description: "B2B SaaS",
+        },
+      };
+      const counts = getRegistrationTicketCounts(reg);
+      assert.equal(counts.startup, 1);
+      assert.equal(counts.investor, 0);
+      assert.equal(counts.total, 1);
+      assert.equal(hasTicketType(reg, "startup"), true);
+      assert.equal(hasTicketType(reg, "investor"), false);
+    });
+
+    it("falls back to investor ticket when tickets is missing but investor questionnaire is answered", () => {
+      const reg = {
+        tickets: {},
+        questionnaire: {
+          investor_ticket_size: "$100k-$500k",
+        },
+      };
+      const counts = getRegistrationTicketCounts(reg);
+      assert.equal(counts.investor, 1);
+      assert.equal(counts.startup, 0);
+      assert.equal(counts.total, 1);
+      assert.equal(hasTicketType(reg, "investor"), true);
+      assert.equal(hasTicketType(reg, "startup"), false);
+    });
+
+    it("defaults to 1 total ticket when no tickets or questionnaire fields exist", () => {
+      const reg = {
+        tickets: null,
+        questionnaire: null,
+      };
+      const counts = getRegistrationTicketCounts(reg);
+      assert.equal(counts.total, 1);
+      assert.equal(counts.other, 1);
+    });
+
+    it("calculates overall ticket totals (not database row count) across registrations", () => {
+      const registrations = [
+        {
+          id: "reg-1",
+          payment_status: "paid",
+          tickets: { startup: 3 },
+          total_amount: 9000,
+        },
+        {
+          id: "reg-2",
+          payment_status: "paid",
+          tickets: { investor: 2, student: 1 },
+          total_amount: 13000,
+        },
+        {
+          id: "reg-3",
+          payment_status: "pending",
+          tickets: { startup: 4 },
+          total_amount: 12000,
+        },
+      ];
+
+      let totalTickets = 0;
+      let paidTickets = 0;
+      let pendingTickets = 0;
+      let startupTickets = 0;
+      let investorTickets = 0;
+      let studentTickets = 0;
+
+      for (const r of registrations) {
+        const counts = getRegistrationTicketCounts(r);
+        const status = r.payment_status.toLowerCase();
+
+        totalTickets += counts.total;
+        startupTickets += counts.startup;
+        investorTickets += counts.investor;
+        studentTickets += counts.student;
+
+        if (status === "paid") {
+          paidTickets += counts.total;
+        } else if (status === "pending") {
+          pendingTickets += counts.total;
+        }
+      }
+
+      // 3 DB rows, but 10 total tickets!
+      assert.equal(registrations.length, 3);
+      assert.equal(totalTickets, 10);
+      assert.equal(paidTickets, 6);
+      assert.equal(pendingTickets, 4);
+      assert.equal(startupTickets, 7);
+      assert.equal(investorTickets, 2);
+      assert.equal(studentTickets, 1);
     });
   });
 });

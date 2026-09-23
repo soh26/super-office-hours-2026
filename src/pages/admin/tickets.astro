@@ -2,7 +2,7 @@
 import Layout from "../../layouts/Layout.astro";
 ---
 
-<Layout title="Ticket Registrations — Super Office Hours Admin">
+<Layout title="Purchases — Super Office Hours Admin">
   <div class="admin-wrapper">
     <!-- Top Navigation Header -->
     <header class="admin-header">
@@ -13,7 +13,7 @@ import Layout from "../../layouts/Layout.astro";
             <span class="badge-admin">Admin</span>
           </a>
           <nav class="admin-nav" aria-label="Admin Navigation">
-            <a href="/admin/tickets" class="admin-nav-link active">Tickets</a>
+            <a href="/admin/tickets" class="admin-nav-link active">Purchases</a>
             <a href="/admin/sponsors" class="admin-nav-link">Sponsors</a>
           </nav>
         </div>
@@ -30,7 +30,7 @@ import Layout from "../../layouts/Layout.astro";
           <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(255,255,255,0.7);"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
         </div>
         <h2>Organizer Access</h2>
-        <p class="auth-desc">Enter the admin password to view and filter registered attendee tickets.</p>
+        <p class="auth-desc">Enter the admin password to view and filter attendee purchases.</p>
 
         <form id="loginForm">
           <div class="form-group">
@@ -57,8 +57,8 @@ import Layout from "../../layouts/Layout.astro";
       <!-- Minimal Header -->
       <div class="dashboard-header-row">
         <div>
-          <h1>Ticket Registrations</h1>
-          <p class="text-muted">Live registrations from database</p>
+          <h1>Purchases</h1>
+          <p class="text-muted">Live purchase registrations from database</p>
         </div>
         <div class="header-controls">
           <button type="button" id="exportCsvBtn" class="btn btn-ghost btn-sm" title="Export current list to CSV">
@@ -74,21 +74,13 @@ import Layout from "../../layouts/Layout.astro";
 
       <!-- Quick Metrics Ribbon -->
       <div class="metrics-grid">
-        <div class="metric-card">
-          <span class="metric-label">Total Registrations</span>
-          <span class="metric-val" id="metricTotal">0</span>
-        </div>
         <div class="metric-card metric-paid">
-          <span class="metric-label">Paid Tickets</span>
+          <span class="metric-label">Ticket Holders</span>
           <span class="metric-val" id="metricPaid">0</span>
         </div>
         <div class="metric-card metric-pending">
-          <span class="metric-label">Pending Payment</span>
+          <span class="metric-label">Pending Individuals</span>
           <span class="metric-val" id="metricPending">0</span>
-        </div>
-        <div class="metric-card">
-          <span class="metric-label">Paid Revenue</span>
-          <span class="metric-val" id="metricRevenue">¥0</span>
         </div>
       </div>
 
@@ -111,10 +103,10 @@ import Layout from "../../layouts/Layout.astro";
             </div>
           </div>
 
-          <!-- Ticket Type Filter -->
+          <!-- Purchase Type Filter -->
           <div class="filter-group">
-            <span class="filter-group-label">Type</span>
-            <div class="filter-tabs" role="tablist" aria-label="Filter ticket type">
+            <span class="filter-group-label">Purchase Type</span>
+            <div class="filter-tabs" role="tablist" aria-label="Filter purchase type">
               <button type="button" class="filter-tab active" data-type="all" id="tabTypeAll">
                 All Types <span class="tab-count" id="countTypeAll">0</span>
               </button>
@@ -137,7 +129,7 @@ import Layout from "../../layouts/Layout.astro";
             type="text"
             id="searchInput"
             class="search-input"
-            placeholder="Search name, email, company, ticket..."
+            placeholder="Search name, email, company, purchase..."
             aria-label="Search registrations"
           />
           <button type="button" id="clearSearchBtn" class="clear-search-btn hidden" aria-label="Clear search">&times;</button>
@@ -153,7 +145,7 @@ import Layout from "../../layouts/Layout.astro";
                 <th style="width:110px;">Status</th>
                 <th>Attendee</th>
                 <th>Company &amp; Role</th>
-                <th>Tickets</th>
+                <th>Purchases</th>
                 <th style="text-align:right;">Amount</th>
                 <th style="width:140px;">Registered</th>
                 <th style="width:70px;text-align:right;">Actions</th>
@@ -161,7 +153,7 @@ import Layout from "../../layouts/Layout.astro";
             </thead>
             <tbody id="ticketsTbody">
               <tr>
-                <td colspan="7" class="table-empty-cell">Loading registrations...</td>
+                <td colspan="7" class="table-empty-cell">Loading purchases...</td>
               </tr>
             </tbody>
           </table>
@@ -198,7 +190,7 @@ import Layout from "../../layouts/Layout.astro";
             <span id="detailRole" class="detail-value"></span>
           </div>
           <div class="detail-item full-width">
-            <span class="detail-label">Tickets Purchased</span>
+            <span class="detail-label">Purchases</span>
             <div id="detailTickets" class="detail-tickets-box"></div>
           </div>
           <div class="detail-item full-width" id="questionnaireSection">
@@ -1063,10 +1055,8 @@ import Layout from "../../layouts/Layout.astro";
     const refreshBtn = document.getElementById("refreshBtn");
     const exportCsvBtn = document.getElementById("exportCsvBtn");
 
-    const metricTotal = document.getElementById("metricTotal");
     const metricPaid = document.getElementById("metricPaid");
     const metricPending = document.getElementById("metricPending");
-    const metricRevenue = document.getElementById("metricRevenue");
 
     const tabStatusAll = document.getElementById("tabStatusAll");
     const tabStatusPaid = document.getElementById("tabStatusPaid");
@@ -1293,21 +1283,18 @@ import Layout from "../../layouts/Layout.astro";
       return `${num.toLocaleString("en-US")} ${code.toUpperCase()}`;
     }
 
-    function formatTicketsSummary(tickets) {
-      if (!tickets) return '<span style="color:rgba(255,255,255,0.35);">—</span>';
-
+    function formatTicketsSummary(tickets, reg) {
       // If array of line items: [{ description, quantity }]
-      if (Array.isArray(tickets)) {
-        if (!tickets.length) return '<span style="color:rgba(255,255,255,0.35);">—</span>';
+      if (Array.isArray(tickets) && tickets.length > 0) {
         return tickets.map((t) => {
-          const name = escapeHtml(t.description || "Ticket");
+          const name = escapeHtml(t.description || "Purchase");
           const q = Number(t.quantity || 1);
           return `<span class="ticket-tag">${name} <span class="ticket-tag-strong">×${q}</span></span>`;
         }).join(" ");
       }
 
       // If object of quantities: { startup: 1, investor: 2 }
-      if (typeof tickets === "object") {
+      if (tickets && typeof tickets === "object" && !Array.isArray(tickets)) {
         const ticketNames = {
           startup: "Startup",
           investor: "Investor",
@@ -1323,6 +1310,16 @@ import Layout from "../../layouts/Layout.astro";
             items.push(`<span class="ticket-tag">${label} <span class="ticket-tag-strong">×${count}</span></span>`);
           }
         }
+        if (items.length) return items.join(" ");
+      }
+
+      if (reg) {
+        const counts = getRegistrationTicketCounts(reg);
+        const items = [];
+        if (counts.startup > 0) items.push(`<span class="ticket-tag">Startup <span class="ticket-tag-strong">×${counts.startup}</span></span>`);
+        if (counts.investor > 0) items.push(`<span class="ticket-tag">Investor <span class="ticket-tag-strong">×${counts.investor}</span></span>`);
+        if (counts.student > 0) items.push(`<span class="ticket-tag">Student <span class="ticket-tag-strong">×${counts.student}</span></span>`);
+        if (counts.other > 0 && !items.length) items.push(`<span class="ticket-tag">Purchase <span class="ticket-tag-strong">×${counts.other}</span></span>`);
         if (items.length) return items.join(" ");
       }
 
@@ -1414,76 +1411,137 @@ import Layout from "../../layouts/Layout.astro";
       }
     }
 
-    function hasTicketType(reg, type) {
-      const target = String(type || "").toLowerCase().trim();
-      if (!target || target === "all") return true;
+    function getRegistrationTicketCounts(reg) {
+      const counts = {
+        total: 0,
+        startup: 0,
+        investor: 0,
+        student: 0,
+        other: 0,
+      };
 
       const tickets = reg?.tickets;
+      let parsedFromTickets = false;
+
       if (Array.isArray(tickets)) {
-        const match = tickets.some((t) => {
-          const desc = String(t.description || t.name || "").toLowerCase();
-          return desc.includes(target) && Number(t.quantity || 1) > 0;
-        });
-        if (match) return true;
+        for (const item of tickets) {
+          if (!item) continue;
+          const desc = String(item.description || item.name || "").toLowerCase();
+          const qty = Math.max(0, Number(item.quantity ?? 1) || 0);
+          if (qty === 0) continue;
+
+          if (desc.includes("startup")) {
+            counts.startup += qty;
+            parsedFromTickets = true;
+          } else if (desc.includes("investor")) {
+            counts.investor += qty;
+            parsedFromTickets = true;
+          } else if (desc.includes("student")) {
+            counts.student += qty;
+            parsedFromTickets = true;
+          } else if (desc.includes("dinner")) {
+            // dinner add-on, not a main ticket
+          } else {
+            counts.other += qty;
+            parsedFromTickets = true;
+          }
+        }
       } else if (tickets && typeof tickets === "object") {
-        for (const [key, count] of Object.entries(tickets)) {
-          if (key.toLowerCase().includes(target) && Number(count) > 0) {
-            return true;
+        for (const [key, val] of Object.entries(tickets)) {
+          const lower = key.toLowerCase();
+          const qty = Math.max(0, Number(val) || 0);
+          if (qty === 0) continue;
+
+          if (lower.includes("startup")) {
+            counts.startup += qty;
+            parsedFromTickets = true;
+          } else if (lower.includes("investor")) {
+            counts.investor += qty;
+            parsedFromTickets = true;
+          } else if (lower.includes("student")) {
+            counts.student += qty;
+            parsedFromTickets = true;
+          } else if (lower.includes("dinner")) {
+            // dinner add-on
+          } else {
+            counts.other += qty;
+            parsedFromTickets = true;
           }
         }
       }
 
-      // Fallback check on questionnaire fields
-      const q = reg?.questionnaire;
-      if (q && typeof q === "object") {
-        if (target === "startup" && (q.funding_stage || q.business_description || q.funding_amount_needed)) {
-          return true;
-        }
-        if (target === "investor" && (q.investor_ticket_size || q.investor_focus_industries || q.investor_lead_ok)) {
-          return true;
+      // Fallback: If no tickets were found from `reg.tickets`, inspect questionnaire or fallback to 1
+      if (!parsedFromTickets) {
+        const q = reg?.questionnaire;
+        if (q && typeof q === "object") {
+          if (q.funding_stage || q.business_description || q.funding_amount_needed) {
+            counts.startup = 1;
+          } else if (q.investor_ticket_size || q.investor_focus_industries || q.investor_lead_ok) {
+            counts.investor = 1;
+          } else if (q.university || q.student_id || q.school) {
+            counts.student = 1;
+          } else {
+            counts.other = 1;
+          }
+        } else {
+          counts.other = 1;
         }
       }
 
-      return false;
+      counts.total = counts.startup + counts.investor + counts.student + counts.other;
+      return counts;
+    }
+
+    function hasTicketType(reg, type) {
+      const target = String(type || "").toLowerCase().trim();
+      if (!target || target === "all") return true;
+
+      const counts = getRegistrationTicketCounts(reg);
+      if (target === "startup") return counts.startup > 0;
+      if (target === "investor") return counts.investor > 0;
+      if (target === "student") return counts.student > 0;
+      if (target === "other") return counts.other > 0;
+      return (counts[target] || 0) > 0;
     }
 
     function updateMetricsAndFilterCounts() {
-      const total = registrationsCache.length;
-      let paidCount = 0;
-      let pendingCount = 0;
+      let totalTickets = 0;
+      let paidTickets = 0;
+      let pendingTickets = 0;
       let paidRevenue = 0;
 
-      let startupCount = 0;
-      let investorCount = 0;
-      let studentCount = 0;
+      let startupTickets = 0;
+      let investorTickets = 0;
+      let studentTickets = 0;
 
       for (const reg of registrationsCache) {
+        const counts = getRegistrationTicketCounts(reg);
         const status = (reg.payment_status || "pending").toLowerCase();
+
+        totalTickets += counts.total;
+        startupTickets += counts.startup;
+        investorTickets += counts.investor;
+        studentTickets += counts.student;
+
         if (status === "paid") {
-          paidCount++;
+          paidTickets += counts.total;
           paidRevenue += Number(reg.total_amount || 0);
         } else if (status === "pending") {
-          pendingCount++;
+          pendingTickets += counts.total;
         }
-
-        if (hasTicketType(reg, "startup")) startupCount++;
-        if (hasTicketType(reg, "investor")) investorCount++;
-        if (hasTicketType(reg, "student")) studentCount++;
       }
 
-      metricTotal.textContent = total.toLocaleString("en-US");
-      metricPaid.textContent = paidCount.toLocaleString("en-US");
-      metricPending.textContent = pendingCount.toLocaleString("en-US");
-      metricRevenue.textContent = `¥${Math.round(paidRevenue).toLocaleString("en-US")}`;
+      metricPaid.textContent = paidTickets.toLocaleString("en-US");
+      metricPending.textContent = pendingTickets.toLocaleString("en-US");
 
-      countStatusAll.textContent = total;
-      countStatusPaid.textContent = paidCount;
-      countStatusPending.textContent = pendingCount;
+      countStatusAll.textContent = totalTickets;
+      countStatusPaid.textContent = paidTickets;
+      countStatusPending.textContent = pendingTickets;
 
-      countTypeAll.textContent = total;
-      countTypeStartup.textContent = startupCount;
-      countTypeInvestor.textContent = investorCount;
-      countTypeStudent.textContent = studentCount;
+      countTypeAll.textContent = totalTickets;
+      countTypeStartup.textContent = startupTickets;
+      countTypeInvestor.textContent = investorTickets;
+      countTypeStudent.textContent = studentTickets;
     }
 
     // Status filter tabs click handlers
@@ -1567,9 +1625,9 @@ import Layout from "../../layouts/Layout.astro";
       const filtered = getFilteredRegistrations();
 
       if (!filtered.length) {
-        let msg = "No registrations match your current filters.";
+        let msg = "No purchases match your current filters.";
         if (currentSearch) {
-          msg = "No registrations match your search query.";
+          msg = "No purchases match your search query.";
         }
         ticketsTbody.innerHTML = `<tr><td colspan="7" class="table-empty-cell">${escapeHtml(msg)}</td></tr>`;
         return;
@@ -1598,7 +1656,7 @@ import Layout from "../../layouts/Layout.astro";
         const safeEmail = escapeHtml(reg.email || "");
         const safeCompany = escapeHtml(reg.company || "—");
         const safeRole = escapeHtml(reg.role || "");
-        const ticketsHtml = formatTicketsSummary(reg.tickets);
+        const ticketsHtml = formatTicketsSummary(reg.tickets, reg);
         const amountDisplay = formatAmount(reg.total_amount, reg.currency);
 
         // Questionnaire teaser badge in Company column (no emojis)
@@ -1611,8 +1669,6 @@ import Layout from "../../layouts/Layout.astro";
               qTeaserHtml = `<span class="q-chip q-chip-startup" title="${escapeHtml(q.business_description || 'Startup Profile')}">${escapeHtml(q.funding_stage)}</span>`;
             } else if (q.investor_ticket_size) {
               qTeaserHtml = `<span class="q-chip q-chip-investor" title="${escapeHtml(q.investor_focus_industries || 'Investor Profile')}">${escapeHtml(q.investor_ticket_size)}</span>`;
-            } else {
-              qTeaserHtml = `<span class="q-chip" title="Questionnaire answered">Q&A</span>`;
             }
           }
         }
@@ -1669,7 +1725,7 @@ import Layout from "../../layouts/Layout.astro";
       detailAmount.textContent = formatAmount(reg.total_amount, reg.currency);
       detailCompany.textContent = reg.company || "—";
       detailRole.textContent = reg.role || "—";
-      detailTickets.innerHTML = formatTicketsSummary(reg.tickets);
+      detailTickets.innerHTML = formatTicketsSummary(reg.tickets, reg);
 
       detailRegId.textContent = reg.id || "—";
       detailStripeSession.textContent = reg.stripe_session_id || "None (pre-checkout or offline)";
@@ -1732,7 +1788,7 @@ import Layout from "../../layouts/Layout.astro";
         "Role",
         "Total Amount",
         "Currency",
-        "Tickets",
+        "Purchases",
         "Stripe Session ID",
         "Created At",
       ];
@@ -1761,7 +1817,7 @@ import Layout from "../../layouts/Layout.astro";
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.setAttribute("href", url);
-      link.setAttribute("download", `tickets-${currentStatusFilter}-${currentTypeFilter}-${new Date().toISOString().slice(0, 10)}.csv`);
+      link.setAttribute("download", `purchases-${currentStatusFilter}-${currentTypeFilter}-${new Date().toISOString().slice(0, 10)}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

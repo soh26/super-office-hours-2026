@@ -166,7 +166,90 @@ export async function recordPaidRegistration(env, session, lineItems = [], fetch
 }
 
 /**
- * Lists registrations ordered by creation time descending.
+ * Computes individual ticket type counts and total ticket count for a registration.
+ * Handles both object representations { startup: 2, investor: 1 } and line item arrays
+ * [{ description: "Startup ticket", quantity: 2 }].
+ * If ticket breakdown is not explicitly present, falls back to questionnaire fields or defaults to 1.
+ */
+export function getRegistrationTicketCounts(reg) {
+  const counts = {
+    total: 0,
+    startup: 0,
+    investor: 0,
+    student: 0,
+    other: 0,
+  };
+
+  const tickets = reg?.tickets;
+  let parsedFromTickets = false;
+
+  if (Array.isArray(tickets)) {
+    for (const item of tickets) {
+      if (!item) continue;
+      const desc = String(item.description || item.name || "").toLowerCase();
+      const qty = Math.max(0, Number(item.quantity ?? 1) || 0);
+      if (qty === 0) continue;
+
+      if (desc.includes("startup")) {
+        counts.startup += qty;
+        parsedFromTickets = true;
+      } else if (desc.includes("investor")) {
+        counts.investor += qty;
+        parsedFromTickets = true;
+      } else if (desc.includes("student")) {
+        counts.student += qty;
+        parsedFromTickets = true;
+      } else {
+        counts.other += qty;
+        parsedFromTickets = true;
+      }
+    }
+  } else if (tickets && typeof tickets === "object") {
+    for (const [key, val] of Object.entries(tickets)) {
+      const lower = key.toLowerCase();
+      const qty = Math.max(0, Number(val) || 0);
+      if (qty === 0) continue;
+
+      if (lower.includes("startup")) {
+        counts.startup += qty;
+        parsedFromTickets = true;
+      } else if (lower.includes("investor")) {
+        counts.investor += qty;
+        parsedFromTickets = true;
+      } else if (lower.includes("student")) {
+        counts.student += qty;
+        parsedFromTickets = true;
+      } else if (lower.includes("dinner")) {
+        // dinner add-on
+      } else {
+        counts.other += qty;
+        parsedFromTickets = true;
+      }
+    }
+  }
+
+  // Fallback: If no tickets were found from `reg.tickets`, inspect questionnaire or fallback to 1
+  if (!parsedFromTickets) {
+    const q = reg?.questionnaire;
+    if (q && typeof q === "object") {
+      if (q.funding_stage || q.business_description || q.funding_amount_needed) {
+        counts.startup = 1;
+      } else if (q.investor_ticket_size || q.investor_focus_industries || q.investor_lead_ok) {
+        counts.investor = 1;
+      } else if (q.university || q.student_id || q.school) {
+        counts.student = 1;
+      } else {
+        counts.other = 1;
+      }
+    } else {
+      counts.other = 1;
+    }
+  }
+
+  counts.total = counts.startup + counts.investor + counts.student + counts.other;
+  return counts;
+}
+
 /**
  * Checks whether a registration contains a specific ticket type ('startup', 'investor', 'student').
  */
@@ -174,33 +257,12 @@ export function hasTicketType(reg, type) {
   const target = String(type || "").toLowerCase().trim();
   if (!target || target === "all") return true;
 
-  const tickets = reg?.tickets;
-  if (Array.isArray(tickets)) {
-    const match = tickets.some((t) => {
-      const desc = String(t.description || t.name || "").toLowerCase();
-      return desc.includes(target) && Number(t.quantity || 1) > 0;
-    });
-    if (match) return true;
-  } else if (tickets && typeof tickets === "object") {
-    for (const [key, count] of Object.entries(tickets)) {
-      if (key.toLowerCase().includes(target) && Number(count) > 0) {
-        return true;
-      }
-    }
-  }
-
-  // Fallback check on questionnaire fields
-  const q = reg?.questionnaire;
-  if (q && typeof q === "object") {
-    if (target === "startup" && (q.funding_stage || q.business_description || q.funding_amount_needed)) {
-      return true;
-    }
-    if (target === "investor" && (q.investor_ticket_size || q.investor_focus_industries || q.investor_lead_ok)) {
-      return true;
-    }
-  }
-
-  return false;
+  const counts = getRegistrationTicketCounts(reg);
+  if (target === "startup") return counts.startup > 0;
+  if (target === "investor") return counts.investor > 0;
+  if (target === "student") return counts.student > 0;
+  if (target === "other") return counts.other > 0;
+  return (counts[target] || 0) > 0;
 }
 
 /**
