@@ -4,8 +4,7 @@ const PRICES = {
   test_taro: { amount: 50, name: "Taro ticket" },
   startup: { amount: 3000, name: "Startup ticket" },
   investor: { amount: 6000, name: "Investor ticket" },
-  lpDinner: { amount: 25000, name: "LP Dinner (Sep 24)" },
-  partner: { amount: 440000, name: "Special Partner" },
+  student: { amount: 1000, name: "Student ticket" },
 };
 
 export async function onRequestOptions() {
@@ -48,7 +47,7 @@ export async function onRequestPost(context) {
     return json({ error: "Test tickets are disabled in production" }, 400);
   }
 
-  const allowedKeys = isDebug ? ["test_taro", "startup", "investor"] : ["startup", "investor"];
+  const allowedKeys = isDebug ? ["test_taro", "startup", "investor", "student"] : ["startup", "investor", "student"];
 
   let totalAmount = 0;
   const line_items = [];
