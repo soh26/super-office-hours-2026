@@ -2,7 +2,7 @@
 import Layout from "../../layouts/Layout.astro";
 ---
 
-<Layout title="Purchases — Super Office Hours Admin">
+<Layout title="Tickets — Super Office Hours Admin">
   <div class="admin-wrapper">
     <!-- Top Navigation Header -->
     <header class="admin-header">
@@ -13,7 +13,7 @@ import Layout from "../../layouts/Layout.astro";
             <span class="badge-admin">Admin</span>
           </a>
           <nav class="admin-nav" aria-label="Admin Navigation">
-            <a href="/admin/tickets" class="admin-nav-link active">Purchases</a>
+            <a href="/admin/tickets" class="admin-nav-link active">Tickets</a>
             <a href="/admin/sponsors" class="admin-nav-link">Sponsors</a>
           </nav>
         </div>
@@ -57,10 +57,13 @@ import Layout from "../../layouts/Layout.astro";
       <!-- Minimal Header -->
       <div class="dashboard-header-row">
         <div>
-          <h1>Purchases</h1>
-          <p class="text-muted">Live purchase registrations from database</p>
+          <h1>Tickets</h1>
         </div>
         <div class="header-controls">
+          <button type="button" id="openAddCrewBtn" class="btn btn-primary btn-sm" title="Register a new crew member">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Add Crew
+          </button>
           <button type="button" id="exportCsvBtn" class="btn btn-ghost btn-sm" title="Export current list to CSV">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             Export CSV
@@ -118,6 +121,9 @@ import Layout from "../../layouts/Layout.astro";
               </button>
               <button type="button" class="filter-tab" data-type="student" id="tabTypeStudent">
                 Student <span class="tab-count" id="countTypeStudent">0</span>
+              </button>
+              <button type="button" class="filter-tab" data-type="crew" id="tabTypeCrew">
+                Crew <span class="tab-count" id="countTypeCrew">0</span>
               </button>
             </div>
           </div>
@@ -195,7 +201,7 @@ import Layout from "../../layouts/Layout.astro";
           </div>
           <div class="detail-item full-width" id="questionnaireSection">
             <div class="section-label-row">
-              <span class="detail-label">Questionnaire Responses</span>
+              <span class="detail-label" id="qSectionTitle">Questionnaire Responses</span>
               <span id="detailQCount" class="q-badge-count"></span>
             </div>
             <div id="detailQuestionnaire" class="detail-questionnaire-wrap"></div>
@@ -227,6 +233,52 @@ import Layout from "../../layouts/Layout.astro";
         <div class="dialog-actions" style="justify-content:flex-end;margin-top:1.5rem;">
           <button type="button" class="btn btn-secondary" data-action="close-dialog">Close</button>
         </div>
+      </div>
+    </dialog>
+
+    <!-- Add Crew Member Dialog -->
+    <dialog id="addCrewDialog" class="admin-dialog">
+      <div class="dialog-box" style="max-width:440px;">
+        <div class="dialog-header">
+          <div>
+            <h2>Add Crew Member</h2>
+            <p class="dialog-subtitle">Register a crew member directly into database</p>
+          </div>
+          <button type="button" class="btn-close-dialog" data-action="close-crew-dialog" aria-label="Close dialog">&times;</button>
+        </div>
+
+        <form id="addCrewForm">
+          <div style="display:flex;flex-direction:column;gap:1rem;margin-top:1rem;">
+            <div class="form-group">
+              <label for="crewName">Full Name *</label>
+              <input type="text" id="crewName" class="input-field" placeholder="e.g. Alex Tanaka" required />
+            </div>
+
+            <div class="form-group">
+              <label for="crewEmail">Email Address</label>
+              <input type="email" id="crewEmail" class="input-field" placeholder="e.g. alex@takeoff-tokyo.com" />
+            </div>
+
+            <div class="form-group">
+              <label for="crewPhone">Phone Number</label>
+              <input type="tel" id="crewPhone" class="input-field" placeholder="e.g. +81 90-1234-5678" />
+            </div>
+
+            <div class="form-group">
+              <label for="crewRole">Role</label>
+              <input type="text" id="crewRole" class="input-field" value="Crew" placeholder="e.g. Stage, Check-in, Lead" />
+            </div>
+
+            <div id="addCrewError" class="alert-error hidden"></div>
+
+            <div class="dialog-actions" style="justify-content:flex-end;gap:0.75rem;margin-top:1rem;">
+              <button type="button" class="btn btn-secondary" data-action="close-crew-dialog">Cancel</button>
+              <button type="submit" id="submitCrewBtn" class="btn btn-primary">
+                Add Crew Member
+              </button>
+            </div>
+          </div>
+        </form>
       </div>
     </dialog>
   </div>
@@ -609,6 +661,11 @@ import Layout from "../../layouts/Layout.astro";
     color: #fbbf24;
     border: 1px solid rgba(245, 158, 11, 0.3);
   }
+  :global(.status-crew) {
+    background: rgba(168, 85, 247, 0.15);
+    color: #d8b4fe;
+    border: 1px solid rgba(168, 85, 247, 0.35);
+  }
   :global(.status-failed),
   :global(.status-canceled) {
     background: rgba(239, 68, 68, 0.14);
@@ -657,6 +714,14 @@ import Layout from "../../layouts/Layout.astro";
   }
   :global(.ticket-tag-strong) {
     color: #2dd4bf;
+  }
+  :global(.ticket-tag-crew) {
+    background: rgba(168, 85, 247, 0.12);
+    border-color: rgba(168, 85, 247, 0.35);
+    color: #e9d5ff;
+  }
+  :global(.ticket-tag-crew .ticket-tag-strong) {
+    color: #c084fc;
   }
   :global(.amount-cell) {
     text-align: right;
@@ -779,7 +844,6 @@ import Layout from "../../layouts/Layout.astro";
     background: #141418;
     color: #f3f4f6;
     max-width: 680px;
-    width: 92vw;
     max-height: 90vh;
     padding: 0;
     margin: auto;
@@ -1037,6 +1101,11 @@ import Layout from "../../layouts/Layout.astro";
     border-color: rgba(59, 130, 246, 0.3);
     color: #93c5fd;
   }
+  :global(.q-chip-crew) {
+    background: rgba(168, 85, 247, 0.15);
+    border-color: rgba(168, 85, 247, 0.35);
+    color: #e9d5ff;
+  }
 </style>
 
 <script>
@@ -1069,14 +1138,27 @@ import Layout from "../../layouts/Layout.astro";
     const tabTypeStartup = document.getElementById("tabTypeStartup");
     const tabTypeInvestor = document.getElementById("tabTypeInvestor");
     const tabTypeStudent = document.getElementById("tabTypeStudent");
+    const tabTypeCrew = document.getElementById("tabTypeCrew");
     const countTypeAll = document.getElementById("countTypeAll");
     const countTypeStartup = document.getElementById("countTypeStartup");
     const countTypeInvestor = document.getElementById("countTypeInvestor");
     const countTypeStudent = document.getElementById("countTypeStudent");
+    const countTypeCrew = document.getElementById("countTypeCrew");
 
     const searchInput = document.getElementById("searchInput");
     const clearSearchBtn = document.getElementById("clearSearchBtn");
     const ticketsTbody = document.getElementById("ticketsTbody");
+
+    // Add Crew Modal Elements
+    const openAddCrewBtn = document.getElementById("openAddCrewBtn");
+    const addCrewDialog = document.getElementById("addCrewDialog");
+    const addCrewForm = document.getElementById("addCrewForm");
+    const crewName = document.getElementById("crewName");
+    const crewEmail = document.getElementById("crewEmail");
+    const crewPhone = document.getElementById("crewPhone");
+    const crewRole = document.getElementById("crewRole");
+    const addCrewError = document.getElementById("addCrewError");
+    const submitCrewBtn = document.getElementById("submitCrewBtn");
 
     // Details Modal Elements
     const detailsDialog = document.getElementById("detailsDialog");
@@ -1299,6 +1381,7 @@ import Layout from "../../layouts/Layout.astro";
           startup: "Startup",
           investor: "Investor",
           student: "Student",
+          crew: "Crew",
           test_taro: "Test (Taro)",
           lpDinner: "LP Dinner",
         };
@@ -1306,8 +1389,10 @@ import Layout from "../../layouts/Layout.astro";
         for (const [key, val] of Object.entries(tickets)) {
           const count = Number(val || 0);
           if (count > 0) {
+            const isCrew = key.toLowerCase().includes("crew");
+            const extraClass = isCrew ? " ticket-tag-crew" : "";
             const label = ticketNames[key] || key.charAt(0).toUpperCase() + key.slice(1);
-            items.push(`<span class="ticket-tag">${label} <span class="ticket-tag-strong">×${count}</span></span>`);
+            items.push(`<span class="ticket-tag${extraClass}">${label} <span class="ticket-tag-strong">×${count}</span></span>`);
           }
         }
         if (items.length) return items.join(" ");
@@ -1319,6 +1404,7 @@ import Layout from "../../layouts/Layout.astro";
         if (counts.startup > 0) items.push(`<span class="ticket-tag">Startup <span class="ticket-tag-strong">×${counts.startup}</span></span>`);
         if (counts.investor > 0) items.push(`<span class="ticket-tag">Investor <span class="ticket-tag-strong">×${counts.investor}</span></span>`);
         if (counts.student > 0) items.push(`<span class="ticket-tag">Student <span class="ticket-tag-strong">×${counts.student}</span></span>`);
+        if (counts.crew > 0) items.push(`<span class="ticket-tag ticket-tag-crew">Crew <span class="ticket-tag-strong">×${counts.crew}</span></span>`);
         if (counts.other > 0 && !items.length) items.push(`<span class="ticket-tag">Purchase <span class="ticket-tag-strong">×${counts.other}</span></span>`);
         if (items.length) return items.join(" ");
       }
@@ -1417,6 +1503,7 @@ import Layout from "../../layouts/Layout.astro";
         startup: 0,
         investor: 0,
         student: 0,
+        crew: 0,
         other: 0,
       };
 
@@ -1439,8 +1526,11 @@ import Layout from "../../layouts/Layout.astro";
           } else if (desc.includes("student")) {
             counts.student += qty;
             parsedFromTickets = true;
+          } else if (desc.includes("crew")) {
+            counts.crew += qty;
+            parsedFromTickets = true;
           } else if (desc.includes("dinner")) {
-            // dinner add-on, not a main ticket
+            // dinner add-on, not a conference pass
           } else {
             counts.other += qty;
             parsedFromTickets = true;
@@ -1461,6 +1551,9 @@ import Layout from "../../layouts/Layout.astro";
           } else if (lower.includes("student")) {
             counts.student += qty;
             parsedFromTickets = true;
+          } else if (lower.includes("crew")) {
+            counts.crew += qty;
+            parsedFromTickets = true;
           } else if (lower.includes("dinner")) {
             // dinner add-on
           } else {
@@ -1470,25 +1563,31 @@ import Layout from "../../layouts/Layout.astro";
         }
       }
 
-      // Fallback: If no tickets were found from `reg.tickets`, inspect questionnaire or fallback to 1
+      // Fallback: If no tickets were found from `reg.tickets`, inspect role, metadata, or questionnaire
       if (!parsedFromTickets) {
-        const q = reg?.questionnaire;
-        if (q && typeof q === "object") {
-          if (q.funding_stage || q.business_description || q.funding_amount_needed) {
-            counts.startup = 1;
-          } else if (q.investor_ticket_size || q.investor_focus_industries || q.investor_lead_ok) {
-            counts.investor = 1;
-          } else if (q.university || q.student_id || q.school) {
-            counts.student = 1;
+        const roleLower = String(reg?.role || "").toLowerCase();
+        const metaType = String(reg?.metadata?.type || "").toLowerCase();
+        if (reg?.is_crew || reg?.payment_status === "crew" || roleLower.includes("crew") || metaType === "crew" || roleLower.includes("staff")) {
+          counts.crew = 1;
+        } else {
+          const q = reg?.questionnaire;
+          if (q && typeof q === "object") {
+            if (q.funding_stage || q.business_description || q.funding_amount_needed) {
+              counts.startup = 1;
+            } else if (q.investor_ticket_size || q.investor_focus_industries || q.investor_lead_ok) {
+              counts.investor = 1;
+            } else if (q.university || q.student_id || q.school) {
+              counts.student = 1;
+            } else {
+              counts.other = 1;
+            }
           } else {
             counts.other = 1;
           }
-        } else {
-          counts.other = 1;
         }
       }
 
-      counts.total = counts.startup + counts.investor + counts.student + counts.other;
+      counts.total = counts.startup + counts.investor + counts.student + counts.crew + counts.other;
       return counts;
     }
 
@@ -1500,6 +1599,7 @@ import Layout from "../../layouts/Layout.astro";
       if (target === "startup") return counts.startup > 0;
       if (target === "investor") return counts.investor > 0;
       if (target === "student") return counts.student > 0;
+      if (target === "crew") return counts.crew > 0;
       if (target === "other") return counts.other > 0;
       return (counts[target] || 0) > 0;
     }
@@ -1513,17 +1613,20 @@ import Layout from "../../layouts/Layout.astro";
       let startupTickets = 0;
       let investorTickets = 0;
       let studentTickets = 0;
+      let crewTickets = 0;
 
       for (const reg of registrationsCache) {
         const counts = getRegistrationTicketCounts(reg);
         const status = (reg.payment_status || "pending").toLowerCase();
+        const isCrew = reg.is_crew || hasTicketType(reg, "crew") || status === "crew";
 
         totalTickets += counts.total;
         startupTickets += counts.startup;
         investorTickets += counts.investor;
         studentTickets += counts.student;
+        crewTickets += counts.crew;
 
-        if (status === "paid") {
+        if (status === "paid" || isCrew) {
           paidTickets += counts.total;
           paidRevenue += Number(reg.total_amount || 0);
         } else if (status === "pending") {
@@ -1542,6 +1645,7 @@ import Layout from "../../layouts/Layout.astro";
       countTypeStartup.textContent = startupTickets;
       countTypeInvestor.textContent = investorTickets;
       countTypeStudent.textContent = studentTickets;
+      countTypeCrew.textContent = crewTickets;
     }
 
     // Status filter tabs click handlers
@@ -1557,13 +1661,19 @@ import Layout from "../../layouts/Layout.astro";
     });
 
     // Ticket type filter tabs click handlers
-    const typeTabs = [tabTypeAll, tabTypeStartup, tabTypeInvestor, tabTypeStudent];
+    const typeTabs = [tabTypeAll, tabTypeStartup, tabTypeInvestor, tabTypeStudent, tabTypeCrew];
     typeTabs.forEach((tab) => {
       if (!tab) return;
       tab.addEventListener("click", () => {
         typeTabs.forEach((t) => t.classList.remove("active"));
         tab.classList.add("active");
         currentTypeFilter = tab.dataset.type;
+        // If switching to crew from pending, reset status filter to 'all'
+        if (currentTypeFilter === "crew" && currentStatusFilter === "pending") {
+          statusTabs.forEach((t) => t.classList.remove("active"));
+          tabStatusAll.classList.add("active");
+          currentStatusFilter = "all";
+        }
         renderTable();
       });
     });
@@ -1585,10 +1695,15 @@ import Layout from "../../layouts/Layout.astro";
     function getFilteredRegistrations() {
       return registrationsCache.filter((reg) => {
         const status = (reg.payment_status || "pending").toLowerCase();
+        const isCrew = reg.is_crew || hasTicketType(reg, "crew") || status === "crew";
 
-        // 1. Status Filter
-        if (currentStatusFilter === "paid" && status !== "paid") return false;
-        if (currentStatusFilter === "pending" && status !== "pending") return false;
+        // 1. Status Filter: 'paid' includes confirmed purchases AND crew ticket holders
+        if (currentStatusFilter === "paid") {
+          if (!isCrew && status !== "paid") return false;
+        }
+        if (currentStatusFilter === "pending") {
+          if (isCrew || status !== "pending") return false;
+        }
 
         // 2. Ticket Type Filter
         if (currentTypeFilter !== "all" && !hasTicketType(reg, currentTypeFilter)) {
@@ -1599,6 +1714,7 @@ import Layout from "../../layouts/Layout.astro";
         if (currentSearch) {
           const name = String(reg.full_name || "").toLowerCase();
           const email = String(reg.email || "").toLowerCase();
+          const phone = String(reg.phone || reg.metadata?.phone || reg.questionnaire?.phone || "").toLowerCase();
           const company = String(reg.company || "").toLowerCase();
           const role = String(reg.role || "").toLowerCase();
           const stripeId = String(reg.stripe_session_id || "").toLowerCase();
@@ -1608,6 +1724,7 @@ import Layout from "../../layouts/Layout.astro";
           const matches =
             name.includes(currentSearch) ||
             email.includes(currentSearch) ||
+            phone.includes(currentSearch) ||
             company.includes(currentSearch) ||
             role.includes(currentSearch) ||
             stripeId.includes(currentSearch) ||
@@ -1635,10 +1752,15 @@ import Layout from "../../layouts/Layout.astro";
 
       ticketsTbody.innerHTML = filtered.map((reg) => {
         const status = (reg.payment_status || "pending").toLowerCase();
+        const isCrew = reg.is_crew || hasTicketType(reg, "crew") || status === "crew";
+
         let badgeClass = "status-pending";
         let badgeText = "Pending";
 
-        if (status === "paid") {
+        if (isCrew) {
+          badgeClass = "status-crew";
+          badgeText = "Crew";
+        } else if (status === "paid") {
           badgeClass = "status-paid";
           badgeText = "Paid";
         } else if (status === "failed" || status === "canceled") {
@@ -1654,15 +1776,24 @@ import Layout from "../../layouts/Layout.astro";
 
         const safeName = escapeHtml(reg.full_name || "Unnamed Attendee");
         const safeEmail = escapeHtml(reg.email || "");
+        const safePhone = escapeHtml(reg.phone || reg.metadata?.phone || reg.questionnaire?.phone || "");
         const safeCompany = escapeHtml(reg.company || "—");
         const safeRole = escapeHtml(reg.role || "");
         const ticketsHtml = formatTicketsSummary(reg.tickets, reg);
         const amountDisplay = formatAmount(reg.total_amount, reg.currency);
 
-        // Questionnaire teaser badge in Company column (no emojis)
+        // Attendee column contact (email or phone)
+        let contactHtml = "";
+        if (safeEmail) {
+          contactHtml = `<a href="mailto:${safeEmail}" class="attendee-email">${safeEmail}</a>`;
+        } else if (safePhone) {
+          contactHtml = `<span class="attendee-email font-mono" style="color:rgba(255,255,255,0.45);">${safePhone}</span>`;
+        }
+
+        // Questionnaire teaser badge in Company column for attendees (no emojis)
         let qTeaserHtml = "";
         const q = reg.questionnaire;
-        if (q && typeof q === "object") {
+        if (!isCrew && q && typeof q === "object") {
           const hasAny = Object.values(q).some((v) => v !== null && v !== "" && v !== undefined);
           if (hasAny) {
             if (q.funding_stage) {
@@ -1673,24 +1804,39 @@ import Layout from "../../layouts/Layout.astro";
           }
         }
 
+        // Company & Role column: for Crew, omit company and display role directly
+        let companyRoleContent = "";
+        if (isCrew) {
+          companyRoleContent = `<span class="role-name" style="font-size:0.85rem;color:rgba(255,255,255,0.85);font-weight:600;">${safeRole || "Crew"}</span>`;
+        } else {
+          companyRoleContent = `
+            <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
+              <span class="company-name">${safeCompany}</span>
+              ${qTeaserHtml}
+            </div>
+            ${safeRole ? `<span class="role-name">${safeRole}</span>` : ""}
+          `;
+        }
+
+        // Amount column: for Crew, omit amount (display dash)
+        const amountTd = isCrew
+          ? `<td class="amount-cell" style="color:rgba(255,255,255,0.35);font-weight:normal;">—</td>`
+          : `<td class="amount-cell">${escapeHtml(amountDisplay)}</td>`;
+
         return `
           <tr data-id="${escapeHtml(reg.id)}">
             <td><span class="status-badge ${badgeClass}">${badgeText}</span></td>
             <td>
               <span class="attendee-name">${safeName}</span>
-              ${safeEmail ? `<a href="mailto:${safeEmail}" class="attendee-email">${safeEmail}</a>` : ""}
+              ${contactHtml}
             </td>
             <td>
-              <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
-                <span class="company-name">${safeCompany}</span>
-                ${qTeaserHtml}
-              </div>
-              ${safeRole ? `<span class="role-name">${safeRole}</span>` : ""}
+              ${companyRoleContent}
             </td>
             <td>
               <div class="tickets-summary">${ticketsHtml}</div>
             </td>
-            <td class="amount-cell">${escapeHtml(amountDisplay)}</td>
+            ${amountTd}
             <td class="date-cell">
               <span>${escapeHtml(formattedDate)}</span>
               ${relativeDate ? `<span class="date-relative">${escapeHtml(relativeDate)}</span>` : ""}
@@ -1715,36 +1861,86 @@ import Layout from "../../layouts/Layout.astro";
     }
 
     function openDetailsModal(reg) {
+      const isCrew = reg.is_crew || hasTicketType(reg, "crew") || (reg.payment_status || "").toLowerCase() === "crew";
       detailName.textContent = reg.full_name || "Unnamed Attendee";
       detailEmail.textContent = reg.email || "No email provided";
 
       const status = (reg.payment_status || "pending").toLowerCase();
-      let badgeClass = status === "paid" ? "status-paid" : "status-pending";
-      detailStatus.innerHTML = `<span class="status-badge ${badgeClass}">${status.toUpperCase()}</span>`;
+      if (isCrew) {
+        detailStatus.innerHTML = `<span class="status-badge status-crew">CREW</span>`;
+        detailAmount.textContent = "—";
+        detailCompany.textContent = "—";
+        detailStripeSession.textContent = "—";
+      } else {
+        let badgeClass = status === "paid" ? "status-paid" : "status-pending";
+        detailStatus.innerHTML = `<span class="status-badge ${badgeClass}">${status.toUpperCase()}</span>`;
+        detailAmount.textContent = formatAmount(reg.total_amount, reg.currency);
+        detailCompany.textContent = reg.company || "—";
+        detailStripeSession.textContent = reg.stripe_session_id || "None (pre-checkout or offline)";
+      }
 
-      detailAmount.textContent = formatAmount(reg.total_amount, reg.currency);
-      detailCompany.textContent = reg.company || "—";
-      detailRole.textContent = reg.role || "—";
+      detailRole.textContent = reg.role || (isCrew ? "Crew" : "—");
+
+      const phone = reg.phone || reg.metadata?.phone || reg.questionnaire?.phone || "";
+
       detailTickets.innerHTML = formatTicketsSummary(reg.tickets, reg);
 
       detailRegId.textContent = reg.id || "—";
-      detailStripeSession.textContent = reg.stripe_session_id || "None (pre-checkout or offline)";
       detailCreatedAt.textContent = reg.created_at ? new Date(reg.created_at).toLocaleString() : "—";
       detailUpdatedAt.textContent = reg.updated_at ? new Date(reg.updated_at).toLocaleString() : "—";
 
-      // Questionnaire Responses
-      const q = reg.questionnaire;
-      const qHtml = renderQuestionnaire(q);
-      if (qHtml) {
+      // Special conditional: append crew data in what would be the questionnaire display section
+      const qSectionTitle = document.getElementById("qSectionTitle");
+      if (isCrew) {
         questionnaireSection.classList.remove("hidden");
-        detailQuestionnaire.innerHTML = qHtml;
-        const count = Object.values(q).filter((v) => v !== null && v !== "" && v !== undefined).length;
-        detailQCount.textContent = `${count} answered`;
-        qRawJsonBox.textContent = JSON.stringify(q, null, 2);
+        if (qSectionTitle) qSectionTitle.textContent = "Crew Attributes & Registry";
+        detailQCount.textContent = "Crew Info";
+
+        const meta = reg.metadata || {};
+        const crewRole = meta.role || reg.role || "Crew";
+        const crewPhone = meta.phone || reg.phone || reg.questionnaire?.phone || "Not provided";
+        const crewEmail = reg.email || meta.email || "Not provided";
+        const crewSource = meta.source || "admin_crew";
+
+        detailQuestionnaire.innerHTML = `
+          <div class="q-grid">
+            <div class="q-card">
+              <div class="q-label">Assigned Role</div>
+              <div class="q-val"><span class="q-pill q-pill-stage">${escapeHtml(crewRole)}</span></div>
+            </div>
+            <div class="q-card">
+              <div class="q-label">Phone Number</div>
+              <div class="q-val font-mono">${escapeHtml(crewPhone)}</div>
+            </div>
+            <div class="q-card">
+              <div class="q-label">Email Address</div>
+              <div class="q-val font-mono">${escapeHtml(crewEmail)}</div>
+            </div>
+            <div class="q-card">
+              <div class="q-label">Pass Allocation</div>
+              <div class="q-val"><span class="q-pill q-pill-ticket">1 × Crew Pass</span></div>
+            </div>
+          </div>
+        `;
+        qRawJsonBox.textContent = JSON.stringify(meta, null, 2);
         qRawJsonBox.classList.add("hidden");
-        rawJsonBtnText.textContent = "Show Raw JSON";
+        rawJsonBtnText.textContent = "Show Raw Metadata";
       } else {
-        questionnaireSection.classList.add("hidden");
+        if (qSectionTitle) qSectionTitle.textContent = "Questionnaire Responses";
+        rawJsonBtnText.textContent = "Show Raw JSON";
+
+        const q = reg.questionnaire || {};
+        const qHtml = renderQuestionnaire(q);
+        if (qHtml) {
+          questionnaireSection.classList.remove("hidden");
+          detailQuestionnaire.innerHTML = qHtml;
+          const count = Object.values(q).filter((v) => v !== null && v !== "" && v !== undefined).length;
+          detailQCount.textContent = `${count} answered`;
+          qRawJsonBox.textContent = JSON.stringify(q, null, 2);
+          qRawJsonBox.classList.add("hidden");
+        } else {
+          questionnaireSection.classList.add("hidden");
+        }
       }
 
       detailsDialog.showModal();
@@ -1771,6 +1967,83 @@ import Layout from "../../layouts/Layout.astro";
       }
     });
 
+    // Add Crew Modal handlers
+    if (openAddCrewBtn) {
+      openAddCrewBtn.addEventListener("click", () => {
+        addCrewError.classList.add("hidden");
+        addCrewForm.reset();
+        crewRole.value = "Crew";
+        addCrewDialog.showModal();
+      });
+    }
+
+    document.querySelectorAll("[data-action='close-crew-dialog']").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        addCrewDialog.close();
+      });
+    });
+
+    addCrewDialog.addEventListener("click", (e) => {
+      if (e.target === addCrewDialog) {
+        addCrewDialog.close();
+      }
+    });
+
+    addCrewForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      addCrewError.classList.add("hidden");
+
+      const name = crewName.value.trim();
+      const email = crewEmail.value.trim();
+      const phone = crewPhone.value.trim();
+      const role = crewRole.value.trim() || "Crew";
+
+      if (!name) {
+        addCrewError.textContent = "Full name is required";
+        addCrewError.classList.remove("hidden");
+        return;
+      }
+
+      const password = getStoredPassword();
+      if (!password) return showLock();
+
+      const originalBtnText = submitCrewBtn.textContent;
+      submitCrewBtn.disabled = true;
+      submitCrewBtn.textContent = "Adding...";
+
+      try {
+        const res = await fetch(getApiUrl("/api/admin/tickets"), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${password}`,
+            "X-Admin-Password": password,
+          },
+          body: JSON.stringify({
+            name,
+            email,
+            phone,
+            role,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to add crew member");
+        }
+
+        addCrewDialog.close();
+        addCrewForm.reset();
+        await loadRegistrations();
+      } catch (err) {
+        addCrewError.textContent = err.message || "An error occurred";
+        addCrewError.classList.remove("hidden");
+      } finally {
+        submitCrewBtn.disabled = false;
+        submitCrewBtn.textContent = originalBtnText;
+      }
+    });
+
     // CSV Export
     exportCsvBtn.addEventListener("click", () => {
       const records = getFilteredRegistrations();
@@ -1784,6 +2057,7 @@ import Layout from "../../layouts/Layout.astro";
         "Payment Status",
         "Full Name",
         "Email",
+        "Phone",
         "Company",
         "Role",
         "Total Amount",
@@ -1796,18 +2070,21 @@ import Layout from "../../layouts/Layout.astro";
       const csvRows = [headers.join(",")];
 
       for (const r of records) {
+        const isCrew = r.is_crew || hasTicketType(r, "crew") || (r.payment_status || "").toLowerCase() === "crew";
         const ticketsStr = JSON.stringify(r.tickets || "").replace(/"/g, '""');
+        const phone = r.phone || r.metadata?.phone || r.questionnaire?.phone || "";
         const row = [
           `"${r.id || ""}"`,
-          `"${r.payment_status || "pending"}"`,
+          `"${isCrew ? "crew" : (r.payment_status || "pending")}"`,
           `"${(r.full_name || "").replace(/"/g, '""')}"`,
           `"${(r.email || "").replace(/"/g, '""')}"`,
-          `"${(r.company || "").replace(/"/g, '""')}"`,
+          `"${phone.replace(/"/g, '""')}"`,
+          `"${isCrew ? "" : (r.company || "").replace(/"/g, '""')}"`,
           `"${(r.role || "").replace(/"/g, '""')}"`,
-          r.total_amount || 0,
-          `"${r.currency || "jpy"}"`,
+          isCrew ? "" : (r.total_amount || 0),
+          `"${isCrew ? "" : (r.currency || "jpy")}"`,
           `"${ticketsStr}"`,
-          `"${r.stripe_session_id || ""}"`,
+          `"${isCrew ? "" : (r.stripe_session_id || "")}"`,
           `"${r.created_at || ""}"`,
         ];
         csvRows.push(row.join(","));

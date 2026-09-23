@@ -1,4 +1,4 @@
-import { listRegistrations } from "../../lib/supabase.js";
+import { createCrewRegistration, listRegistrations } from "../../lib/supabase.js";
 
 function checkAdminAuth(context) {
   const adminPassword = (
@@ -46,11 +46,30 @@ export async function onRequestGet(context) {
   return json({ registrations });
 }
 
+export async function onRequestPost(context) {
+  const authErr = checkAdminAuth(context);
+  if (authErr) return json({ error: authErr.error }, authErr.status);
+
+  let body;
+  try {
+    body = await context.request.json();
+  } catch {
+    return json({ error: "Invalid JSON payload" }, 400);
+  }
+
+  const result = await createCrewRegistration(context.env, body);
+  if (result.error) {
+    return json({ error: result.error }, result.status || 400);
+  }
+
+  return json(result, 201);
+}
+
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Admin-Password",
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   };
 }
 

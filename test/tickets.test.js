@@ -1,7 +1,19 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { getRegistrationTicketCounts, hasTicketType, listRegistrations } from "../functions/lib/supabase.js";
-import { onRequestGet as adminTicketsGet, onRequestOptions as adminTicketsOptions } from "../functions/api/admin/tickets.js";
+import {
+  createCrewMember,
+  createCrewRegistration,
+  getRegistrationTicketCounts,
+  hasTicketType,
+  listCrew,
+  listRegistrations,
+  normalizeCrewRecord,
+} from "../functions/lib/supabase.js";
+import {
+  onRequestGet as adminTicketsGet,
+  onRequestOptions as adminTicketsOptions,
+  onRequestPost as adminTicketsPost,
+} from "../functions/api/admin/tickets.js";
 
 describe("Ticket Registrations Admin & Supabase Integration", () => {
   const env = {
@@ -56,12 +68,19 @@ describe("Ticket Registrations Admin & Supabase Integration", () => {
     });
 
     it("queries all registrations ordered by created_at descending", async () => {
-      let calledUrl = null;
+      const urlsCalled = [];
       let calledOptions = null;
 
       const mockFetch = async (url, options) => {
-        calledUrl = url;
+        urlsCalled.push(url);
         calledOptions = options;
+        if (url.includes("/rest/v1/crew")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => [],
+          };
+        }
         return {
           ok: true,
           status: 200,
@@ -71,7 +90,7 @@ describe("Ticket Registrations Admin & Supabase Integration", () => {
 
       const res = await listRegistrations(env, { status: "all" }, mockFetch);
 
-      assert.equal(calledUrl, "https://xyz.supabase.co/rest/v1/registrations?order=created_at.desc");
+      assert.ok(urlsCalled.some((u) => u.includes("registrations?order=created_at.desc")));
       assert.equal(calledOptions.method, "GET");
       assert.equal(calledOptions.headers.apikey, "secret_service_role_key");
       assert.equal(calledOptions.headers.Authorization, "Bearer secret_service_role_key");
@@ -167,6 +186,12 @@ describe("Ticket Registrations Admin & Supabase Integration", () => {
       const originalFetch = globalThis.fetch;
       try {
         globalThis.fetch = async (url) => {
+          if (url.includes("/rest/v1/crew")) {
+            return new Response(JSON.stringify([]), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
           assert.match(url, /registrations\?order=created_at\.desc/);
           return new Response(JSON.stringify(mockRegistrations), {
             status: 200,
@@ -195,7 +220,13 @@ describe("Ticket Registrations Admin & Supabase Integration", () => {
     it("accepts valid X-Admin-Password custom header", async () => {
       const originalFetch = globalThis.fetch;
       try {
-        globalThis.fetch = async () => {
+        globalThis.fetch = async (url) => {
+          if (url.includes("/rest/v1/crew")) {
+            return new Response(JSON.stringify([]), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
           return new Response(JSON.stringify(mockRegistrations), {
             status: 200,
             headers: { "Content-Type": "application/json" },
@@ -516,6 +547,247 @@ describe("Ticket Registrations Admin & Supabase Integration", () => {
       assert.equal(startupTickets, 7);
       assert.equal(investorTickets, 2);
       assert.equal(studentTickets, 1);
+    });
+
+    it("accurately counts crew tickets and detects crew ticket type", () => {
+      const reg = {
+        role: "Stage Manager",
+        tickets: { crew: 2 },
+      };
+      const counts = getRegistrationTicketCounts(reg);
+      assert.equal(counts.crew, 2);
+      assert.equal(counts.total, 2);
+      assert.equal(hasTicketType(reg, "crew"), true);
+      assert.equal(hasTicketType(reg, "startup"), false);
+    });
+
+    it("falls back to crew ticket when role contains Crew or staff", () => {
+      const reg = {
+        role: "Event Crew Lead",
+        tickets: null,
+      };
+      const counts = getRegistrationTicketCounts(reg);
+      assert.equal(counts.crew, 1);
+      assert.equal(counts.total, 1);
+      assert.equal(hasTicketType(reg, "crew"), true);
+    });
+
+    it("counts crew passes towards the total number of ticket holders", () => {
+      const records = [
+        {
+          id: "r1",
+          payment_status: "paid",
+          tickets: { startup: 2 },
+        },
+        {
+          id: "r2",
+          payment_status: "pending",
+          tickets: { investor: 1 },
+        },
+        {
+          id: "r3",
+          payment_status: "paid",
+          role: "Crew",
+          tickets: { crew: 1 },
+          metadata: { type: "crew" },
+        },
+        {
+          id: "r4",
+          payment_status: "paid",
+          role: "Lead Coordinator",
+          tickets: { crew: 1 },
+          metadata: { type: "crew" },
+        },
+      ];
+
+      let totalTickets = 0;
+      let ticketHolders = 0;
+      let pendingTickets = 0;
+
+      for (const r of records) {
+        const counts = getRegistrationTicketCounts(r);
+        const status = r.payment_status.toLowerCase();
+        const isCrew = hasTicketType(r, "crew") || r.metadata?.type === "crew";
+
+        totalTickets += counts.total;
+        if (status === "paid" || isCrew) {
+          ticketHolders += counts.total;
+        } else if (status === "pending") {
+          pendingTickets += counts.total;
+        }
+      }
+
+      // 2 startup (paid) + 2 crew passes = 4 total ticket holders!
+      assert.equal(ticketHolders, 4);
+      assert.equal(pendingTickets, 1);
+      assert.equal(totalTickets, 5);
+    });
+  });
+
+  describe("Crew Registration with Metadata Attributes (Adhoc Project Schema)", () => {
+    it("createCrewRegistration validates that full name is required", async () => {
+      const res = await createCrewRegistration(env, { name: "" });
+      assert.equal(res.status, 400);
+      assert.match(res.error, /Full name is required/);
+    });
+
+    it("createCrewRegistration allows email and phone to be optional", async () => {
+      let insertedPayload = null;
+      let targetUrl = null;
+
+      const mockFetch = async (url, options) => {
+        targetUrl = url;
+        insertedPayload = JSON.parse(options.body);
+        return {
+          ok: true,
+          status: 201,
+          json: async () => [{ ...insertedPayload, id: "crew-opt" }],
+        };
+      };
+
+      const res = await createCrewRegistration(
+        env,
+        {
+          name: "Solo Crew",
+        },
+        mockFetch
+      );
+
+      assert.equal(res.success, true);
+      assert.equal(targetUrl, "https://xyz.supabase.co/rest/v1/registrations");
+      assert.equal(insertedPayload.full_name, "Solo Crew");
+      assert.equal(insertedPayload.email, "");
+      assert.equal(insertedPayload.metadata.phone, null);
+      assert.equal(insertedPayload.metadata.email, null);
+      assert.equal(insertedPayload.metadata.role, "Crew");
+      assert.equal(insertedPayload.metadata.type, "crew");
+    });
+
+    it("createCrewRegistration inserts into /rest/v1/registrations with crew attributes in metadata", async () => {
+      let insertedPayload = null;
+      let targetUrl = null;
+
+      const mockFetch = async (url, options) => {
+        targetUrl = url;
+        insertedPayload = JSON.parse(options.body);
+        return {
+          ok: true,
+          status: 201,
+          json: async () => [{ ...insertedPayload, id: "crew-123" }],
+        };
+      };
+
+      const res = await createCrewRegistration(
+        env,
+        {
+          name: "Kenji Sato",
+          email: "kenji@takeoff-tokyo.com",
+          phone: "+81 90-1111-2222",
+          role: "Volunteer Lead",
+        },
+        mockFetch
+      );
+
+      assert.equal(res.success, true);
+      assert.equal(targetUrl, "https://xyz.supabase.co/rest/v1/registrations");
+      assert.equal(insertedPayload.full_name, "Kenji Sato");
+      assert.equal(insertedPayload.role, "Volunteer Lead");
+      assert.deepEqual(insertedPayload.tickets, { crew: 1 });
+      assert.equal(insertedPayload.payment_status, "paid");
+      assert.equal(insertedPayload.total_amount, 0);
+      assert.equal(insertedPayload.metadata.type, "crew");
+      assert.equal(insertedPayload.metadata.role, "Volunteer Lead");
+      assert.equal(insertedPayload.metadata.phone, "+81 90-1111-2222");
+      assert.equal(insertedPayload.metadata.email, "kenji@takeoff-tokyo.com");
+      assert.equal(res.registration.is_crew, true);
+    });
+
+    it("listRegistrations filters specifically by type: 'crew'", async () => {
+      const mockRows = [
+        ...mockRegistrations,
+        {
+          id: "reg-crew-1",
+          full_name: "Crew Member One",
+          email: "crew1@event.com",
+          company: "Takeoff Tokyo",
+          role: "Stage Lead",
+          tickets: { crew: 1 },
+          payment_status: "paid",
+          metadata: { type: "crew", phone: "+81 90-0000-1111", role: "Stage Lead" },
+          created_at: "2026-09-23T15:00:00.000Z",
+        },
+      ];
+
+      const mockFetch = async () => {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => mockRows,
+        };
+      };
+
+      const results = await listRegistrations(env, { type: "crew" }, mockFetch);
+      assert.equal(results.length, 1);
+      assert.equal(results[0].id, "reg-crew-1");
+      assert.equal(results[0].full_name, "Crew Member One");
+      assert.equal(results[0].is_crew, true);
+    });
+
+    it("POST /api/admin/tickets rejects unauthenticated requests", async () => {
+      const req = new Request("http://localhost:8787/api/admin/tickets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Alex" }),
+      });
+
+      const res = await adminTicketsPost({ env, request: req });
+      assert.equal(res.status, 401);
+    });
+
+    it("POST /api/admin/tickets creates crew member and returns 201", async () => {
+      const originalFetch = globalThis.fetch;
+      try {
+        let postedPayload = null;
+        let targetUrl = null;
+        globalThis.fetch = async (url, options) => {
+          targetUrl = url;
+          if (options && options.method === "POST") {
+            postedPayload = JSON.parse(options.body);
+            return new Response(JSON.stringify([{ ...postedPayload, id: "new-crew-456" }]), {
+              status: 201,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+          return new Response(JSON.stringify([]), { status: 200 });
+        };
+
+        const req = new Request("http://localhost:8787/api/admin/tickets", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer test-admin-secret",
+          },
+          body: JSON.stringify({
+            name: "Yuki Crew",
+            email: "yuki@takeoff-tokyo.com",
+            phone: "+81 90-3333-4444",
+            role: "Stage Lead",
+          }),
+        });
+
+        const res = await adminTicketsPost({ env, request: req });
+        assert.equal(res.status, 201);
+        const data = await res.json();
+        assert.equal(data.success, true);
+        assert.equal(targetUrl, "https://xyz.supabase.co/rest/v1/registrations");
+        assert.equal(postedPayload.full_name, "Yuki Crew");
+        assert.deepEqual(postedPayload.tickets, { crew: 1 });
+        assert.equal(postedPayload.metadata.phone, "+81 90-3333-4444");
+        assert.equal(postedPayload.metadata.role, "Stage Lead");
+        assert.equal(postedPayload.metadata.type, "crew");
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
     });
   });
 });
