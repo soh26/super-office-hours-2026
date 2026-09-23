@@ -177,6 +177,7 @@ export function getRegistrationTicketCounts(reg) {
     startup: 0,
     investor: 0,
     student: 0,
+    crew: 0,
     other: 0,
   };
 
@@ -199,6 +200,11 @@ export function getRegistrationTicketCounts(reg) {
       } else if (desc.includes("student")) {
         counts.student += qty;
         parsedFromTickets = true;
+      } else if (desc.includes("crew")) {
+        counts.crew += qty;
+        parsedFromTickets = true;
+      } else if (desc.includes("dinner")) {
+        // dinner add-on, not a conference pass
       } else {
         counts.other += qty;
         parsedFromTickets = true;
@@ -219,6 +225,9 @@ export function getRegistrationTicketCounts(reg) {
       } else if (lower.includes("student")) {
         counts.student += qty;
         parsedFromTickets = true;
+      } else if (lower.includes("crew")) {
+        counts.crew += qty;
+        parsedFromTickets = true;
       } else if (lower.includes("dinner")) {
         // dinner add-on
       } else {
@@ -228,30 +237,36 @@ export function getRegistrationTicketCounts(reg) {
     }
   }
 
-  // Fallback: If no tickets were found from `reg.tickets`, inspect questionnaire or fallback to 1
+  // Fallback: If no tickets were found from `reg.tickets`, inspect role, metadata, or questionnaire
   if (!parsedFromTickets) {
-    const q = reg?.questionnaire;
-    if (q && typeof q === "object") {
-      if (q.funding_stage || q.business_description || q.funding_amount_needed) {
-        counts.startup = 1;
-      } else if (q.investor_ticket_size || q.investor_focus_industries || q.investor_lead_ok) {
-        counts.investor = 1;
-      } else if (q.university || q.student_id || q.school) {
-        counts.student = 1;
+    const roleLower = String(reg?.role || "").toLowerCase();
+    const metaType = String(reg?.metadata?.type || "").toLowerCase();
+    if (reg?.is_crew || reg?.payment_status === "crew" || roleLower.includes("crew") || metaType === "crew" || roleLower.includes("staff")) {
+      counts.crew = 1;
+    } else {
+      const q = reg?.questionnaire;
+      if (q && typeof q === "object") {
+        if (q.funding_stage || q.business_description || q.funding_amount_needed) {
+          counts.startup = 1;
+        } else if (q.investor_ticket_size || q.investor_focus_industries || q.investor_lead_ok) {
+          counts.investor = 1;
+        } else if (q.university || q.student_id || q.school) {
+          counts.student = 1;
+        } else {
+          counts.other = 1;
+        }
       } else {
         counts.other = 1;
       }
-    } else {
-      counts.other = 1;
     }
   }
 
-  counts.total = counts.startup + counts.investor + counts.student + counts.other;
+  counts.total = counts.startup + counts.investor + counts.student + counts.crew + counts.other;
   return counts;
 }
 
 /**
- * Checks whether a registration contains a specific ticket type ('startup', 'investor', 'student').
+ * Checks whether a registration contains a specific ticket type ('startup', 'investor', 'student', 'crew').
  */
 export function hasTicketType(reg, type) {
   const target = String(type || "").toLowerCase().trim();
@@ -261,8 +276,29 @@ export function hasTicketType(reg, type) {
   if (target === "startup") return counts.startup > 0;
   if (target === "investor") return counts.investor > 0;
   if (target === "student") return counts.student > 0;
+  if (target === "crew") return counts.crew > 0;
   if (target === "other") return counts.other > 0;
   return (counts[target] || 0) > 0;
+}
+
+/**
+ * Normalizes a crew registration record for backwards compatibility.
+ */
+export function normalizeCrewRecord(c) {
+  if (!c) return null;
+  return {
+    ...c,
+    is_crew: true,
+    tickets: c.tickets || { crew: 1 },
+    payment_status: c.payment_status || "paid",
+  };
+}
+
+/**
+ * Queries crew records from registrations.
+ */
+export async function listCrew(env, fetchFn = fetch) {
+  return listRegistrations(env, { type: "crew" }, fetchFn);
 }
 
 /**
@@ -275,10 +311,12 @@ export async function listRegistrations(env, options = {}, fetchFn = fetch) {
 
   const status = typeof options === "string" ? options : options?.status;
   const type = typeof options === "object" ? options?.type : null;
-  let query = `${config.url}/rest/v1/registrations?order=created_at.desc`;
+  const normalizedStatus = (status || "all").trim().toLowerCase();
+  const normalizedType = (type || "all").trim().toLowerCase();
 
-  if (status && status !== "all") {
-    query += `&payment_status=eq.${encodeURIComponent(status.trim().toLowerCase())}`;
+  let query = `${config.url}/rest/v1/registrations?order=created_at.desc`;
+  if (normalizedStatus !== "all") {
+    query += `&payment_status=eq.${encodeURIComponent(normalizedStatus)}`;
   }
 
   try {
@@ -295,15 +333,92 @@ export async function listRegistrations(env, options = {}, fetchFn = fetch) {
 
     const rows = await res.json();
     let results = Array.isArray(rows) ? rows : [];
-    if (type && type !== "all") {
-      results = results.filter((r) => hasTicketType(r, type));
+
+    // Tag is_crew for convenience
+    results = results.map((r) => ({
+      ...r,
+      is_crew: hasTicketType(r, "crew") || r.metadata?.type === "crew" || String(r.role || "").toLowerCase().includes("crew"),
+    }));
+
+    // Filter by ticket type if specified
+    if (normalizedType && normalizedType !== "all") {
+      results = results.filter((r) => hasTicketType(r, normalizedType));
     }
+
     return results;
   } catch (err) {
     console.warn("[Supabase] Failed to list registrations:", err.message);
     return [];
   }
 }
+
+/**
+ * Creates a manual registration row for Crew/Staff registry purposes.
+ * Stores all crew attributes (role, phone, email, source) in the metadata field.
+ */
+export async function createCrewRegistration(env, data, fetchFn = fetch) {
+  const config = getSupabaseConfig(env);
+  if (!config) return { error: "Supabase not configured in server environment", status: 500 };
+
+  const name = String(data.name || data.full_name || "").trim();
+  if (!name) {
+    return { error: "Full name is required", status: 400 };
+  }
+
+  const email = String(data.email || "").trim();
+  const phone = String(data.phone || data.phone_number || "").trim();
+  const role = String(data.role || "Crew").trim() || "Crew";
+
+  const payload = {
+    id: data.id || crypto.randomUUID(),
+    full_name: name,
+    email: email || "",
+    company: "Takeoff Tokyo",
+    role,
+    tickets: { crew: 1 },
+    total_amount: 0,
+    currency: "jpy",
+    event_slug: data.eventSlug || "super-office-hours",
+    payment_status: "paid",
+    questionnaire: phone ? { phone } : {},
+    metadata: {
+      source: "admin_crew",
+      type: "crew",
+      role,
+      phone: phone || null,
+      email: email || null,
+      created_at: data.created_at || new Date().toISOString(),
+      ...(data.metadata || {}),
+    },
+  };
+
+  try {
+    const res = await fetchFn(`${config.url}/rest/v1/registrations`, {
+      method: "POST",
+      headers: getHeaders(config.key),
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn(`[Supabase] Crew registration insert returned ${res.status}: ${errText}`);
+      return { error: `Database error: ${errText}`, status: 500 };
+    }
+
+    const inserted = await res.json();
+    const rec = Array.isArray(inserted) ? inserted[0] : inserted;
+    return {
+      success: true,
+      crew: rec,
+      registration: { ...rec, is_crew: true },
+    };
+  } catch (err) {
+    console.warn("[Supabase] Failed to create crew registration:", err.message);
+    return { error: err.message, status: 500 };
+  }
+}
+
+export const createCrewMember = createCrewRegistration;
 
 /**
  * Creates a custom sponsor link record.
