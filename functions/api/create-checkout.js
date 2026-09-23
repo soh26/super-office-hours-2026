@@ -4,7 +4,7 @@ const PRICES = {
   test_taro: { amount: 50, name: "Taro ticket" },
   startup: { amount: 3000, name: "Startup ticket" },
   investor: { amount: 6000, name: "Investor ticket" },
-  student: { amount: 1000, name: "Student ticket" },
+  student: { amount: 1500, name: "Student ticket" },
 };
 
 export async function onRequestOptions() {
